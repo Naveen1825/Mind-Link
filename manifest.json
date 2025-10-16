@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Double Click Logger",
+  "version": "1.0.2",
+  "description": "Logs double-click events and the selected word (if any) to the console.",
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "permissions": [
+    "tabs",
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup/index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "content/utils.js",
+        "content/api.js",
+        "content/summaryPanel.js",
+        "content/summarize.js",
+        "content/dictionary.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

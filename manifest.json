@@ -4,14 +4,35 @@
   "version": "1.0.2",
   "description": "Logs double-click events and the selected word (if any) to the console.",
   "host_permissions": [
+    "<all_urls>",
     "https://generativelanguage.googleapis.com/*"
   ],
   "permissions": [
     "tabs",
-    "activeTab"
+    "activeTab",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "storage"
   ],
   "action": {
     "default_popup": "popup/index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules/basic-blocklist.json"
+      },
+      {
+        "id": "ruleset_extended",
+        "enabled": true,
+        "path": "rules/extended-blocklist.json"
+      }
+    ]
   },
   "content_scripts": [
     {
@@ -21,7 +42,9 @@
         "content/api.js",
         "content/summaryPanel.js",
         "content/summarize.js",
-        "content/dictionary.js"
+        "content/dictionary.js",
+        "content/cosmetic.js",
+        "content/ads-learner.js"
       ],
       "run_at": "document_idle"
     }

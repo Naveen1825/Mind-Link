@@ -11,35 +11,39 @@ const DNR_MAX_RULES = 1000;
 // Chrome AI API Handler (Service Worker has access to AI APIs)
 async function handleAIRequest(request) {
   console.log('[Background] Handling AI request:', request.action);
-  
+
   try {
     if (request.action === 'callLanguageModel') {
-      // Use window.ai or self.ai in service worker context
-      const aiNamespace = typeof self.ai !== 'undefined' ? self.ai : (typeof ai !== 'undefined' ? ai : null);
-      
-      if (aiNamespace && aiNamespace.languageModel) {
-        console.log('[Background] Using ai.languageModel API');
-        const session = await aiNamespace.languageModel.create({
-          systemPrompt: request.systemPrompt || '',
+      if (typeof LanguageModel !== 'undefined') {
+        console.log('[Background] Using LanguageModel API');
+
+        const createOptions = {
           temperature: request.temperature || 0.7,
           topK: request.topK || 3
-        });
+        };
+
+        // Add initialPrompts if systemPrompt is provided
+        if (request.systemPrompt) {
+          createOptions.initialPrompts = [
+            { role: 'system', content: request.systemPrompt }
+          ];
+        }
+
+        const session = await LanguageModel.create(createOptions);
         const result = await session.prompt(request.prompt);
         session.destroy();
         console.log('[Background] AI response received:', result.slice(0, 100));
         return { success: true, result: result.trim() };
       } else {
-        throw new Error('AI languageModel not available in service worker context');
+        throw new Error('LanguageModel API not available in service worker context');
       }
     }
-    
+
     if (request.action === 'callSummarizer') {
-      const aiNamespace = typeof self.ai !== 'undefined' ? self.ai : (typeof ai !== 'undefined' ? ai : null);
-      
-      if (aiNamespace && aiNamespace.summarizer) {
-        console.log('[Background] Using ai.summarizer API');
-        const summarizer = await aiNamespace.summarizer.create({
-          type: request.type || 'tl;dr',
+      if (typeof Summarizer !== 'undefined') {
+        console.log('[Background] Using Summarizer API');
+        const summarizer = await Summarizer.create({
+          type: request.type || 'tldr',
           format: request.format || 'markdown',
           length: request.length || 'medium'
         });
@@ -51,20 +55,19 @@ async function handleAIRequest(request) {
         throw new Error('Summarizer API not available in service worker context');
       }
     }
-    
+
     if (request.action === 'checkAIAvailability') {
-      const aiNamespace = typeof self.ai !== 'undefined' ? self.ai : (typeof ai !== 'undefined' ? ai : null);
       return {
         success: true,
         available: {
-          languageModel: !!(aiNamespace && aiNamespace.languageModel),
-          summarizer: !!(aiNamespace && aiNamespace.summarizer),
-          translator: !!(aiNamespace && aiNamespace.translator),
-          rewriter: !!(aiNamespace && aiNamespace.rewriter)
+          languageModel: typeof LanguageModel !== 'undefined',
+          summarizer: typeof Summarizer !== 'undefined',
+          translator: typeof Translator !== 'undefined',
+          rewriter: typeof Rewriter !== 'undefined'
         }
       };
     }
-    
+
     throw new Error('Unknown AI action: ' + request.action);
   } catch (error) {
     console.error('[Background] AI request error:', error);
@@ -148,7 +151,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse(result);
       return;
     }
-    
+
     if (msg && msg.type === 'AD_RULES_LEARNED') {
       try {
         const { host, selectors = [], urlFilters = [] } = msg.payload || {};
@@ -157,7 +160,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const state = await getLocal(['ad_rules']);
         const adRules = state.ad_rules || {};
         const existing = adRules[host] || { selectors: [], urlFilters: [], ruleIds: [] };
-        const mergedSelectors = Array.from(new Set([...(existing.selectors||[]), ...selectors.map(String)])).slice(0, 200);
+        const mergedSelectors = Array.from(new Set([...(existing.selectors || []), ...selectors.map(String)])).slice(0, 200);
         adRules[host] = { selectors: mergedSelectors, urlFilters: existing.urlFilters || [], ruleIds: existing.ruleIds || [] };
         await setLocal({ ad_rules: adRules });
         // Apply network rules
@@ -193,7 +196,7 @@ chrome.runtime.onInstalled.addListener(async () => {
         action: { type: 'block' },
         condition: {
           urlFilter: f,
-          resourceTypes: ['script','xmlhttprequest','image','sub_frame','media','font']
+          resourceTypes: ['script', 'xmlhttprequest', 'image', 'sub_frame', 'media', 'font']
         }
       });
     }

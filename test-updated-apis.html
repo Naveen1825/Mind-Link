@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind-Link API Update Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+    .container {
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #667eea;
+      font-size: 1.3em;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 6px;
+      background: white;
+      border-left: 4px solid #667eea;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success {
+      border-left-color: #4caf50;
+      background: #f1f8f4;
+      color: #2e7d32;
+    }
+    .error {
+      border-left-color: #f44336;
+      background: #fef1f1;
+      color: #c62828;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .status-pass {
+      background: #4caf50;
+      color: white;
+    }
+    .status-fail {
+      background: #f44336;
+      color: white;
+    }
+    .status-pending {
+      background: #ff9800;
+      color: white;
+    }
+    .summary {
+      background: #e8eaf6;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .summary h3 {
+      margin-top: 0;
+      color: #667eea;
+    }
+    #runAll {
+      display: block;
+      margin: 20px auto;
+      padding: 15px 40px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Mind-Link API Update Test Suite</h1>
+    <p class="subtitle">Testing updated Chrome AI APIs (systemPrompt → initialPrompts, "tl;dr" → "tldr")</p>
+    
+    <button id="runAll">▶️ Run All Tests</button>
+
+    <!-- Test 1: API Availability -->
+    <div class="test-section">
+      <h2>Test 1: API Availability <span class="status status-pending" id="status1">PENDING</span></h2>
+      <button onclick="testAPIAvailability()">Run Test</button>
+      <div id="result1" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Test 2: LanguageModel with initialPrompts -->
+    <div class="test-section">
+      <h2>Test 2: LanguageModel API (New initialPrompts Format) <span class="status status-pending" id="status2">PENDING</span></h2>
+      <button onclick="testLanguageModel()">Run Test</button>
+      <div id="result2" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Test 3: Summarizer with 'tldr' -->
+    <div class="test-section">
+      <h2>Test 3: Summarizer API (New 'tldr' Type) <span class="status status-pending" id="status3">PENDING</span></h2>
+      <button onclick="testSummarizer()">Run Test</button>
+      <div id="result3" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Test 4: Old Format Should Fail -->
+    <div class="test-section">
+      <h2>Test 4: Verify Old Format Fails <span class="status status-pending" id="status4">PENDING</span></h2>
+      <button onclick="testOldFormat()">Run Test</button>
+      <div id="result4" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary" id="summary" style="display:none;">
+      <h3>📊 Test Summary</h3>
+      <p id="summaryText"></p>
+    </div>
+  </div>
+
+  <script>
+    let testResults = {
+      total: 4,
+      passed: 0,
+      failed: 0
+    };
+
+    function updateStatus(testNum, status, isError = false) {
+      const statusEl = document.getElementById(`status${testNum}`);
+      statusEl.textContent = status;
+      statusEl.className = 'status ' + (isError ? 'status-fail' : 'status-pass');
+    }
+
+    function showResult(testNum, message, isError = false) {
+      const resultEl = document.getElementById(`result${testNum}`);
+      resultEl.textContent = message;
+      resultEl.style.display = 'block';
+      resultEl.className = 'result ' + (isError ? 'error' : 'success');
+      
+      if (!isError) {
+        testResults.passed++;
+      } else {
+        testResults.failed++;
+      }
+    }
+
+    function showSummary() {
+      const summaryEl = document.getElementById('summary');
+      const summaryText = document.getElementById('summaryText');
+      summaryText.innerHTML = `
+        <strong>Passed:</strong> ${testResults.passed} / ${testResults.total}<br>
+        <strong>Failed:</strong> ${testResults.failed} / ${testResults.total}<br>
+        <strong>Result:</strong> ${testResults.passed === testResults.total ? '✅ All tests passed!' : '⚠️ Some tests failed'}
+      `;
+      summaryEl.style.display = 'block';
+    }
+
+    // Test 1: Check API Availability
+    async function testAPIAvailability() {
+      console.log('=== Test 1: API Availability ===');
+      try {
+        const apis = {
+          LanguageModel: typeof LanguageModel !== 'undefined',
+          Summarizer: typeof Summarizer !== 'undefined',
+          Translator: typeof Translator !== 'undefined',
+          Rewriter: typeof Rewriter !== 'undefined'
+        };
+
+        console.log('APIs:', apis);
+
+        const allAvailable = Object.values(apis).every(v => v === true);
+        
+        if (allAvailable) {
+          updateStatus(1, 'PASS');
+          showResult(1, `✅ All APIs Available:\n\n${JSON.stringify(apis, null, 2)}`);
+        } else {
+          updateStatus(1, 'FAIL', true);
+          showResult(1, `❌ Some APIs Missing:\n\n${JSON.stringify(apis, null, 2)}`, true);
+        }
+      } catch (error) {
+        updateStatus(1, 'FAIL', true);
+        showResult(1, `❌ Error: ${error.message}`, true);
+        console.error('Test 1 error:', error);
+      }
+    }
+
+    // Test 2: LanguageModel with initialPrompts (NEW FORMAT)
+    async function testLanguageModel() {
+      console.log('=== Test 2: LanguageModel API (New Format) ===');
+      try {
+        if (typeof LanguageModel === 'undefined') {
+          throw new Error('LanguageModel API not available');
+        }
+
+        console.log('Creating session with initialPrompts...');
+        const session = await LanguageModel.create({
+          initialPrompts: [
+            { role: 'system', content: 'You are a helpful test assistant.' }
+          ],
+          temperature: 0.7,
+          topK: 3
+        });
+
+        console.log('Session created, sending prompt...');
+        const result = await session.prompt('Respond with exactly: "Hello from new API!"');
+        
+        session.destroy();
+        console.log('Result:', result);
+
+        updateStatus(2, 'PASS');
+        showResult(2, `✅ LanguageModel with initialPrompts works!\n\nPrompt: "Respond with exactly: 'Hello from new API!'"\n\nResponse:\n${result}`);
+      } catch (error) {
+        updateStatus(2, 'FAIL', true);
+        showResult(2, `❌ Error: ${error.message}\n\nStack: ${error.stack}`, true);
+        console.error('Test 2 error:', error);
+      }
+    }
+
+    // Test 3: Summarizer with 'tldr' (NEW FORMAT)
+    async function testSummarizer() {
+      console.log('=== Test 3: Summarizer API (New Format) ===');
+      try {
+        if (typeof Summarizer === 'undefined') {
+          throw new Error('Summarizer API not available');
+        }
+
+        console.log('Creating summarizer with type: "tldr"...');
+        const summarizer = await Summarizer.create({
+          type: 'tldr',  // NEW FORMAT (not 'tl;dr')
+          format: 'plain-text',
+          length: 'short'
+        });
+
+        const testText = `Artificial intelligence (AI) is intelligence demonstrated by machines, 
+        as opposed to natural intelligence displayed by animals including humans. AI research has been 
+        defined as the field of study of intelligent agents, which refers to any system that perceives 
+        its environment and takes actions that maximize its chance of achieving its goals. The term 
+        "artificial intelligence" had previously been used to describe machines that mimic and display 
+        "human" cognitive skills that are associated with the human mind, such as "learning" and 
+        "problem-solving". This definition has since been rejected by major AI researchers who now 
+        describe AI in terms of rationality and acting rationally, which does not limit how intelligence 
+        can be articulated.`;
+
+        console.log('Summarizing text...');
+        const result = await summarizer.summarize(testText);
+        
+        summarizer.destroy();
+        console.log('Summary:', result);
+
+        updateStatus(3, 'PASS');
+        showResult(3, `✅ Summarizer with 'tldr' type works!\n\nOriginal text length: ${testText.length} chars\nSummary:\n${result}`);
+      } catch (error) {
+        updateStatus(3, 'FAIL', true);
+        showResult(3, `❌ Error: ${error.message}\n\nStack: ${error.stack}`, true);
+        console.error('Test 3 error:', error);
+      }
+    }
+
+    // Test 4: Verify old format fails gracefully
+    async function testOldFormat() {
+      console.log('=== Test 4: Verify Old Format Fails ===');
+      let errors = [];
+      
+      // Test old systemPrompt format
+      try {
+        if (typeof LanguageModel !== 'undefined') {
+          console.log('Testing old systemPrompt format (should fail or be ignored)...');
+          const session = await LanguageModel.create({
+            systemPrompt: 'This is the old format'  // OLD FORMAT
+          });
+          session.destroy();
+          errors.push('⚠️ Old systemPrompt format did not throw error (might be ignored by API)');
+        }
+      } catch (error) {
+        console.log('Old format correctly rejected:', error.message);
+      }
+
+      // Test old 'tl;dr' format
+      try {
+        if (typeof Summarizer !== 'undefined') {
+          console.log('Testing old "tl;dr" type (should fail)...');
+          const summarizer = await Summarizer.create({
+            type: 'tl;dr',  // OLD FORMAT
+            format: 'plain-text',
+            length: 'short'
+          });
+          summarizer.destroy();
+          errors.push('❌ Old "tl;dr" format was accepted (should have failed!)');
+        }
+      } catch (error) {
+        console.log('Old "tl;dr" format correctly rejected:', error.message);
+      }
+
+      if (errors.length === 0) {
+        updateStatus(4, 'PASS');
+        showResult(4, `✅ Old API formats correctly handled!\n\n- Old "systemPrompt" handled properly\n- Old "tl;dr" type rejected as expected`);
+      } else {
+        updateStatus(4, 'PARTIAL', true);
+        showResult(4, `⚠️ Partial Success:\n\n${errors.join('\n')}`, true);
+      }
+    }
+
+    // Run all tests
+    document.getElementById('runAll').addEventListener('click', async () => {
+      testResults = { total: 4, passed: 0, failed: 0 };
+      document.getElementById('summary').style.display = 'none';
+      
+      await testAPIAvailability();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      await testLanguageModel();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      await testSummarizer();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      await testOldFormat();
+      
+      showSummary();
+    });
+
+    // Log to console for debugging
+    console.log('%c🧪 Mind-Link API Test Suite Loaded', 'color: #667eea; font-size: 16px; font-weight: bold;');
+    console.log('Click "Run All Tests" button or run individual tests.');
+    console.log('\nAvailable test functions:');
+    console.log('- testAPIAvailability()');
+    console.log('- testLanguageModel()');
+    console.log('- testSummarizer()');
+    console.log('- testOldFormat()');
+  </script>
+</body>
+</html>

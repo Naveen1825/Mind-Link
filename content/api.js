@@ -1,7 +1,7 @@
 // Chrome Built-in AI API wrapper
 // Runs in MAIN world to access LanguageModel API directly
-(function(){
-  
+(function () {
+
   // Feature detection helpers
   function isChromeAIAvailable() {
     return typeof LanguageModel !== 'undefined';
@@ -25,47 +25,57 @@
       if (!isChromeAIAvailable()) {
         throw new Error("LanguageModel API not available. Enable chrome://flags and download model.");
       }
-      
+
       console.log("[Mind-Link] Calling LanguageModel API with prompt:", promptText.slice(0, 100));
-      
-      const session = await LanguageModel.create({
-        systemPrompt: options.systemPrompt || ''
-      });
-      
+
+      const createOptions = {};
+      if (options.systemPrompt) {
+        createOptions.initialPrompts = [
+          { role: 'system', content: options.systemPrompt }
+        ];
+      }
+
+      const session = await LanguageModel.create(createOptions);
+
       console.log("[Mind-Link] Session created, prompting with timeout...");
-      
+
       // Use Promise.race to add a timeout to the prompt call
       const promptPromise = session.prompt(promptText);
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Prompt execution timeout')), 25000)
       );
-      
+
       const result = await Promise.race([promptPromise, timeoutPromise]);
-      
+
       console.log("[Mind-Link] Received AI response:", result.slice(0, 100));
       session.destroy();
-      
+
       console.log("[Mind-Link] Returning result");
       return result.trim();
-      
+
     } catch (error) {
       console.error("[Mind-Link] Chrome AI error:", error);
-      
+
       // Try to use streamingPrompt as fallback
       if (error.message.includes('timeout')) {
         console.log("[Mind-Link] Trying streamingPrompt fallback...");
         try {
-          const session = await LanguageModel.create({
-            systemPrompt: options.systemPrompt || ''
-          });
-          
+          const createOptions = {};
+          if (options.systemPrompt) {
+            createOptions.initialPrompts = [
+              { role: 'system', content: options.systemPrompt }
+            ];
+          }
+
+          const session = await LanguageModel.create(createOptions);
+
           let fullResponse = '';
           const stream = session.promptStreaming(promptText);
-          
+
           for await (const chunk of stream) {
             fullResponse = chunk;
           }
-          
+
           session.destroy();
           console.log("[Mind-Link] Streaming response received:", fullResponse.slice(0, 100));
           return fullResponse.trim();
@@ -73,7 +83,7 @@
           console.error("[Mind-Link] Streaming also failed:", streamError);
         }
       }
-      
+
       throw new Error(`Chrome AI failed: ${error.message}`);
     }
   }
@@ -84,21 +94,29 @@
       if (!isSummarizerAvailable()) {
         throw new Error("Summarizer API not available");
       }
-      
+
       console.log("[Mind-Link] Calling Summarizer API");
-      
+
+      // Check availability before creating
+      const availability = await Summarizer.availability();
+      console.log("[Mind-Link] Summarizer availability:", availability);
+
+      if (availability === 'no') {
+        throw new Error("Summarizer not available on this device");
+      }
+
       const summarizer = await Summarizer.create({
-        type: options.type || "tl;dr",
+        type: options.type || "tldr",
         format: options.format || "markdown",
         length: options.length || "medium"
       });
-      
+
       const result = await summarizer.summarize(text);
       summarizer.destroy();
-      
+
       console.log("[Mind-Link] Received summarizer response");
       return result.trim();
-      
+
     } catch (error) {
       console.error("Summarizer error:", error);
       // Fallback to Prompt API
@@ -120,17 +138,17 @@
     // Main AI function (replaces old callGemini)
     callGemini: callChromeAI, // Keep old name for backwards compatibility
     callChromeAI,
-    
+
     // Specialized functions
     summarizeText,
     simplifyJargon,
-    
+
     // Feature detection (return values, not functions, since isolated world can't call MAIN world functions)
     isChromeAIAvailable: () => isChromeAIAvailable(),
     isSummarizerAvailable: () => isSummarizerAvailable(),
     isTranslatorAvailable: () => isTranslatorAvailable(),
     isRewriterAvailable: () => isRewriterAvailable(),
-    
+
     // Store availability as properties too
     __apiAvailable: isChromeAIAvailable(),
     __summarizerAvailable: isSummarizerAvailable()
@@ -150,19 +168,19 @@
   // Listen for API requests from isolated world
   document.addEventListener('__notesio_api_request', async (event) => {
     const { requestId, type, promptText, text, options } = event.detail;
-    
+
     console.log(`[Mind-Link MAIN] Received request:`, { requestId, type });
-    
+
     try {
       let result;
-      
+
       // Add timeout to prevent hanging forever
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Request handler timeout')), 35000);
       });
-      
+
       const workPromise = (async () => {
-        switch(type) {
+        switch (type) {
           case 'callChromeAI':
             return await callChromeAI(promptText, options);
           case 'summarizeText':
@@ -173,18 +191,18 @@
             throw new Error(`Unknown request type: ${type}`);
         }
       })();
-      
+
       result = await Promise.race([workPromise, timeoutPromise]);
-      
+
       console.log(`[Mind-Link MAIN] Sending response for ${requestId}`);
-      
+
       document.dispatchEvent(new CustomEvent('__notesio_api_response', {
         detail: { requestId, result }
       }));
-      
+
     } catch (error) {
       console.log(`[Mind-Link MAIN] Sending error for ${requestId}:`, error.message);
-      
+
       document.dispatchEvent(new CustomEvent('__notesio_api_response', {
         detail: { requestId, error: error.message }
       }));

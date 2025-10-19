@@ -11,8 +11,7 @@
     "activeTab",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
-    "storage",
-    "aiOriginTrial"
+    "storage"
   ],
   "action": {
     "default_popup": "popup/index.html"
@@ -36,7 +35,9 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
         "content/api-bridge.js",
         "content/utils.js",
@@ -49,6 +50,16 @@
         "content/jargon-simplifier.js"
       ],
       "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/api.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

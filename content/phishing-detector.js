@@ -1,7 +1,7 @@
 // Phishing Detection: Analyzes page for suspicious indicators
 // Designed to protect elderly users from phishing attacks
-(function(){
-  
+(function () {
+
   let phishingCheckInProgress = false;
   let warningOverlay = null;
 
@@ -14,9 +14,9 @@
         hasPasswordField: !!document.querySelector('input[type="password"]'),
         hasLoginForm: !!document.querySelector('form[action*="login"], form[id*="login"], form[class*="login"]'),
         urgentLanguage: document.body.innerText.toLowerCase().includes('act now') ||
-                       document.body.innerText.toLowerCase().includes('account suspended') ||
-                       document.body.innerText.toLowerCase().includes('verify immediately') ||
-                       document.body.innerText.toLowerCase().includes('urgent action required'),
+          document.body.innerText.toLowerCase().includes('account suspended') ||
+          document.body.innerText.toLowerCase().includes('verify immediately') ||
+          document.body.innerText.toLowerCase().includes('urgent action required'),
         suspiciousLinks: Array.from(document.querySelectorAll('a[href]'))
           .map(a => a.href)
           .filter(href => href && !href.startsWith(location.origin))
@@ -34,12 +34,12 @@
 
     const overlay = document.createElement('div');
     overlay.id = 'mindlink-phishing-warning';
-    
+
     // Determine severity
     let borderColor = '#f59e0b'; // orange (warning)
     let title = '⚠️ Warning: This site may be suspicious';
     let emoji = '⚠️';
-    
+
     if (trustScore <= 2) {
       borderColor = '#ef4444'; // red (danger)
       title = '🛑 Danger: This site looks very suspicious';
@@ -49,7 +49,7 @@
       title = '✅ This site appears safe';
       emoji = '✅';
     }
-    
+
     Object.assign(overlay.style, {
       position: 'fixed',
       top: '0',
@@ -108,7 +108,7 @@
 
   async function checkForPhishing() {
     if (phishingCheckInProgress) return;
-    
+
     // Don't check on certain known-safe domains
     const safeDomains = ['google.com', 'github.com', 'microsoft.com', 'localhost'];
     if (safeDomains.some(d => location.hostname.includes(d))) {
@@ -153,12 +153,18 @@ Return ONLY JSON:
 }`;
 
       const result = await window.__notesio_api.callChromeAI(prompt);
-      
+
       let parsed = null;
       try {
-        parsed = JSON.parse(result);
+        // Try to extract JSON from the response (AI might add extra text)
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          parsed = JSON.parse(result);
+        }
       } catch (e) {
-        console.error("[Mind-Link] Failed to parse phishing check result");
+        console.error("[Mind-Link] Failed to parse phishing check result:", result);
         return;
       }
 
@@ -168,7 +174,7 @@ Return ONLY JSON:
           parsed.trustScore,
           parsed.reason || "This website shows signs of being unsafe."
         );
-        
+
         // Optional: notify family member if configured
         // (This would require additional implementation)
       }

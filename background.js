@@ -1,4 +1,5 @@
 // Background service worker: persists learned ad rules and applies dynamic DNR rules
+// Also handles Chrome AI API calls (service workers have access to AI APIs)
 // Storage schema (chrome.storage.local):
 // {
 //   ad_rules: { [host: string]: { selectors: string[], urlFilters: string[], ruleIds: number[] } },
@@ -6,6 +7,70 @@
 // }
 
 const DNR_MAX_RULES = 1000;
+
+// Chrome AI API Handler (Service Worker has access to AI APIs)
+async function handleAIRequest(request) {
+  console.log('[Background] Handling AI request:', request.action);
+  
+  try {
+    if (request.action === 'callLanguageModel') {
+      // Use window.ai or self.ai in service worker context
+      const aiNamespace = typeof self.ai !== 'undefined' ? self.ai : (typeof ai !== 'undefined' ? ai : null);
+      
+      if (aiNamespace && aiNamespace.languageModel) {
+        console.log('[Background] Using ai.languageModel API');
+        const session = await aiNamespace.languageModel.create({
+          systemPrompt: request.systemPrompt || '',
+          temperature: request.temperature || 0.7,
+          topK: request.topK || 3
+        });
+        const result = await session.prompt(request.prompt);
+        session.destroy();
+        console.log('[Background] AI response received:', result.slice(0, 100));
+        return { success: true, result: result.trim() };
+      } else {
+        throw new Error('AI languageModel not available in service worker context');
+      }
+    }
+    
+    if (request.action === 'callSummarizer') {
+      const aiNamespace = typeof self.ai !== 'undefined' ? self.ai : (typeof ai !== 'undefined' ? ai : null);
+      
+      if (aiNamespace && aiNamespace.summarizer) {
+        console.log('[Background] Using ai.summarizer API');
+        const summarizer = await aiNamespace.summarizer.create({
+          type: request.type || 'tl;dr',
+          format: request.format || 'markdown',
+          length: request.length || 'medium'
+        });
+        const result = await summarizer.summarize(request.text);
+        summarizer.destroy();
+        console.log('[Background] Summarizer response received:', result.slice(0, 100));
+        return { success: true, result: result.trim() };
+      } else {
+        throw new Error('Summarizer API not available in service worker context');
+      }
+    }
+    
+    if (request.action === 'checkAIAvailability') {
+      const aiNamespace = typeof self.ai !== 'undefined' ? self.ai : (typeof ai !== 'undefined' ? ai : null);
+      return {
+        success: true,
+        available: {
+          languageModel: !!(aiNamespace && aiNamespace.languageModel),
+          summarizer: !!(aiNamespace && aiNamespace.summarizer),
+          translator: !!(aiNamespace && aiNamespace.translator),
+          rewriter: !!(aiNamespace && aiNamespace.rewriter)
+        }
+      };
+    }
+    
+    throw new Error('Unknown AI action: ' + request.action);
+  } catch (error) {
+    console.error('[Background] AI request error:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 async function getLocal(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -77,6 +142,13 @@ async function applyDynamicRulesForHost(host, urlFilters) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
+    // Handle AI API requests from content scripts
+    if (msg && msg.type === 'AI_REQUEST') {
+      const result = await handleAIRequest(msg);
+      sendResponse(result);
+      return;
+    }
+    
     if (msg && msg.type === 'AD_RULES_LEARNED') {
       try {
         const { host, selectors = [], urlFilters = [] } = msg.payload || {};

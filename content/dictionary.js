@@ -35,12 +35,46 @@
   async function fetchDefinition(word) {
     try {
       setButtonLoading();
+      
+      // Check if Chrome AI is available
+      if (!window.__notesio_apiAvailable) {
+        setButtonAsDefinition('⚠️ Chrome AI not available. Please check console (F12) for details.');
+        return;
+      }
+      
+      console.log('[Dictionary] Calling Chrome AI for word:', word);
+      
       const prompt = `Provide a concise dictionary-style definition for the word: "${word}". Keep it to two or three short sentences, plain text.`;
-      const text = await window.__notesio_api.callGemini(prompt);
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
+      );
+      
+      const text = await Promise.race([
+        window.__notesio_api.callChromeAI(prompt),
+        timeoutPromise
+      ]);
+      
+      console.log('[Dictionary] Received response:', text);
       setButtonAsDefinition(text || 'No definition found.');
     } catch (err) {
-      console.error('Gemini API error:', err);
-      setButtonAsDefinition('Error fetching definition. See console for details.');
+      console.error('[Dictionary] Chrome AI error:', err);
+      console.error('[Dictionary] Error details:', err.message, err.stack);
+      
+      let errorMsg = 'Error: ' + err.message;
+      
+      if (err.message.includes('not available') || err.message.includes('not supported')) {
+        errorMsg = '⚠️ Chrome AI unavailable. Check console (F12) for details.';
+      } else if (err.message.includes('downloading') || err.message.includes('after-download')) {
+        errorMsg = '⏳ AI model downloading... Try again later.';
+      } else if (err.message.includes('timeout')) {
+        errorMsg = '⏱️ Request timed out. Model may be loading. Try again.';
+      } else if (err.message.includes('LanguageModel is not defined')) {
+        errorMsg = '⚠️ LanguageModel API not available. Enable chrome://flags';
+      }
+      
+      setButtonAsDefinition(errorMsg);
     }
   }
 

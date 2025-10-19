@@ -1,18 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "Double Click Logger",
-  "version": "1.0.2",
-  "description": "Logs double-click events and the selected word (if any) to the console.",
+  "name": "Mind-Link - AI-Powered Web Assistant",
+  "version": "2.0.0",
+  "description": "Chrome extension with built-in AI for summarization, definitions, ad blocking, and phishing detection.",
   "host_permissions": [
-    "<all_urls>",
-    "https://generativelanguage.googleapis.com/*"
+    "<all_urls>"
   ],
   "permissions": [
     "tabs",
     "activeTab",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
-    "storage"
+    "storage",
+    "aiOriginTrial"
   ],
   "action": {
     "default_popup": "popup/index.html"
@@ -38,15 +38,17 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "content/api-bridge.js",
         "content/utils.js",
-        "content/api.js",
         "content/summaryPanel.js",
         "content/summarize.js",
         "content/dictionary.js",
         "content/cosmetic.js",
-        "content/ads-learner.js"
+        "content/ads-learner.js",
+        "content/phishing-detector.js",
+        "content/jargon-simplifier.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ]
 }

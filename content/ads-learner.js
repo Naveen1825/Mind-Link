@@ -42,14 +42,37 @@
   async function learnAdRules(){
     const host = getHost();
     if (!host) return;
+    
+    // Check if Chrome AI is available before proceeding (use bridge variable)
+    if (!window.__notesio_apiAvailable) {
+      console.log("[Mind-Link] Chrome AI not available, skipping ad learning");
+      return;
+    }
+    
     try {
       const dom = collectDomSignals();
       const urls = collectUrlSignals();
       if (dom.length === 0 && urls.length === 0) return;
 
-      const prompt = `You are helping build an ad/tracker blocker. From the DOM candidates and URLs below, propose conservative CSS selectors that hide ad containers and URL filters appropriate for a Chrome declarativeNetRequest \"urlFilter\" (no regex, just substrings).\n\nReturn ONLY JSON with shape: {\n  \"selectors\": string[],\n  \"urlFilters\": string[]\n}\nRules:\n- Prefer specific selectors (e.g., [id*=\"ad\-banner\"], .sponsored) over generic ones (avoid hiding main content).\n- Limit to at most 20 selectors and 20 urlFilters.\n- Each urlFilter should be a short substring safely matching ad/tracker URLs (e.g., \'doubleclick.net\', \'/ads/\').\n- Do NOT include comments or explanations.\n\nDOM candidates (JSON):\n${JSON.stringify(dom).slice(0, 18000)}\n\nURLs (JSON array):\n${JSON.stringify(urls).slice(0, 8000)}`;
+      const prompt = `You are helping build an ad/tracker blocker. From the DOM candidates and URLs below, propose conservative CSS selectors that hide ad containers and URL filters appropriate for a Chrome declarativeNetRequest "urlFilter" (no regex, just substrings).
 
-      const output = await window.__notesio_api.callGemini(prompt);
+Return ONLY JSON with shape: {
+  "selectors": string[],
+  "urlFilters": string[]
+}
+Rules:
+- Prefer specific selectors (e.g., [id*="ad-banner"], .sponsored) over generic ones (avoid hiding main content).
+- Limit to at most 20 selectors and 20 urlFilters.
+- Each urlFilter should be a short substring safely matching ad/tracker URLs (e.g., 'doubleclick.net', '/ads/').
+- Do NOT include comments or explanations.
+
+DOM candidates (JSON):
+${JSON.stringify(dom).slice(0, 18000)}
+
+URLs (JSON array):
+${JSON.stringify(urls).slice(0, 8000)}`;
+
+      const output = await window.__notesio_api.callChromeAI(prompt);
       let parsed = null;
       try { parsed = JSON.parse(output); } catch {}
       if (!parsed || typeof parsed !== 'object') return;
@@ -65,6 +88,7 @@
       });
     } catch (e) {
       // swallow errors to avoid breaking the page
+      console.log("[Mind-Link] Ad learning error (non-critical):", e.message);
     }
   }
 

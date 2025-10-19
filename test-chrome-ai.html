@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chrome AI Test Page</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .test-box {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      background: #f9f9f9;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+    .status.success { background: #d1fae5; color: #065f46; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+    .status.warning { background: #fef3c7; color: #92400e; }
+    .status.info { background: #dbeafe; color: #1e40af; }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    pre {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      border-top-color: #2563eb;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Chrome AI Diagnostics Tool</h1>
+  <p>Use this page to test if Chrome's Built-in AI is working on your system.</p>
+
+  <div class="test-box">
+    <h2>Step 1: Check API Availability</h2>
+    <button onclick="checkAvailability()">Run Availability Check</button>
+    <div id="availability-result"></div>
+  </div>
+
+  <div class="test-box">
+    <h2>Step 2: Check Model Status</h2>
+    <button onclick="checkModelStatus()">Check Model Status</button>
+    <div id="model-result"></div>
+  </div>
+
+  <div class="test-box">
+    <h2>Step 3: Test Prompt API</h2>
+    <button onclick="testPrompt()">Test Prompt</button>
+    <div id="prompt-result"></div>
+  </div>
+
+  <div class="test-box">
+    <h2>Step 4: Test Summarizer API</h2>
+    <button onclick="testSummarizer()">Test Summarizer</button>
+    <div id="summarizer-result"></div>
+  </div>
+
+  <div class="test-box">
+    <h2>Step 5: Trigger Model Download</h2>
+    <button onclick="triggerDownload()">Download Model (if needed)</button>
+    <div id="download-result"></div>
+  </div>
+
+  <script>
+    function showResult(elementId, html) {
+      document.getElementById(elementId).innerHTML = html;
+    }
+
+    function showLoading(elementId) {
+      showResult(elementId, '<div class="status info"><span class="loading"></span> Testing...</div>');
+    }
+
+    async function checkAvailability() {
+      showLoading('availability-result');
+      
+      try {
+        const checks = {
+          'self.ai exists': !!self.ai,
+          'languageModel API': !!(self.ai && self.ai.languageModel),
+          'summarizer API': !!(self.ai && self.ai.summarizer),
+          'rewriter API': !!(self.ai && self.ai.rewriter),
+          'translator API': !!(self.ai && self.ai.translator)
+        };
+
+        let html = '<div class="status success">✅ Availability Check Complete</div>';
+        html += '<pre>' + JSON.stringify(checks, null, 2) + '</pre>';
+        
+        if (!checks['languageModel API']) {
+          html += '<div class="status error">❌ Chrome AI not available. Enable flags at chrome://flags</div>';
+        }
+        
+        showResult('availability-result', html);
+      } catch (error) {
+        showResult('availability-result', 
+          `<div class="status error">❌ Error: ${error.message}</div>`);
+      }
+    }
+
+    async function checkModelStatus() {
+      showLoading('model-result');
+      
+      try {
+        if (!self.ai || !self.ai.languageModel) {
+          showResult('model-result', 
+            '<div class="status error">❌ languageModel API not available. Enable at chrome://flags</div>');
+          return;
+        }
+
+        const capabilities = await self.ai.languageModel.capabilities();
+        
+        let statusClass = 'info';
+        let statusIcon = 'ℹ️';
+        let message = '';
+        
+        if (capabilities.available === 'readily') {
+          statusClass = 'success';
+          statusIcon = '✅';
+          message = 'Model is ready to use!';
+        } else if (capabilities.available === 'after-download') {
+          statusClass = 'warning';
+          statusIcon = '⏳';
+          message = 'Model needs to be downloaded. See Step 5.';
+        } else if (capabilities.available === 'no') {
+          statusClass = 'error';
+          statusIcon = '❌';
+          message = 'Model not supported on this device.';
+        }
+        
+        let html = `<div class="status ${statusClass}">${statusIcon} ${message}</div>`;
+        html += '<pre>' + JSON.stringify(capabilities, null, 2) + '</pre>';
+        
+        if (capabilities.available === 'after-download') {
+          html += '<div class="status info">📥 Go to chrome://components and find "Optimization Guide On Device Model", then click "Check for update"</div>';
+        }
+        
+        showResult('model-result', html);
+      } catch (error) {
+        showResult('model-result', 
+          `<div class="status error">❌ Error: ${error.message}</div>`);
+      }
+    }
+
+    async function testPrompt() {
+      showLoading('prompt-result');
+      
+      try {
+        if (!self.ai || !self.ai.languageModel) {
+          showResult('prompt-result', 
+            '<div class="status error">❌ API not available</div>');
+          return;
+        }
+
+        const capabilities = await self.ai.languageModel.capabilities();
+        
+        if (capabilities.available !== 'readily') {
+          showResult('prompt-result', 
+            `<div class="status warning">⏳ Model not ready. Status: ${capabilities.available}</div>`);
+          return;
+        }
+
+        const session = await self.ai.languageModel.create();
+        const startTime = Date.now();
+        const result = await session.prompt("Define the word 'test' in one sentence.");
+        const duration = Date.now() - startTime;
+        await session.destroy();
+        
+        let html = '<div class="status success">✅ Prompt API Working!</div>';
+        html += `<p><strong>Response time:</strong> ${duration}ms</p>`;
+        html += `<pre>${result}</pre>`;
+        
+        showResult('prompt-result', html);
+      } catch (error) {
+        showResult('prompt-result', 
+          `<div class="status error">❌ Error: ${error.message}</div>`);
+      }
+    }
+
+    async function testSummarizer() {
+      showLoading('summarizer-result');
+      
+      try {
+        if (!self.ai || !self.ai.summarizer) {
+          showResult('summarizer-result', 
+            '<div class="status error">❌ Summarizer API not available</div>');
+          return;
+        }
+
+        const capabilities = await self.ai.summarizer.capabilities();
+        
+        if (capabilities.available !== 'readily') {
+          showResult('summarizer-result', 
+            `<div class="status warning">⏳ Summarizer not ready. Status: ${capabilities.available}</div>`);
+          return;
+        }
+
+        const summarizer = await self.ai.summarizer.create();
+        const testText = "The Chrome Built-in AI APIs allow developers to use powerful language models directly in the browser. This includes summarization, text generation, and rewriting capabilities. All processing happens on-device, ensuring privacy and low latency.";
+        
+        const startTime = Date.now();
+        const result = await summarizer.summarize(testText);
+        const duration = Date.now() - startTime;
+        await summarizer.destroy();
+        
+        let html = '<div class="status success">✅ Summarizer API Working!</div>';
+        html += `<p><strong>Response time:</strong> ${duration}ms</p>`;
+        html += `<p><strong>Original:</strong> ${testText}</p>`;
+        html += `<p><strong>Summary:</strong> ${result}</p>`;
+        
+        showResult('summarizer-result', html);
+      } catch (error) {
+        showResult('summarizer-result', 
+          `<div class="status error">❌ Error: ${error.message}</div>`);
+      }
+    }
+
+    async function triggerDownload() {
+      showLoading('download-result');
+      
+      try {
+        if (!self.ai || !self.ai.languageModel) {
+          showResult('download-result', 
+            '<div class="status error">❌ API not available. Enable at chrome://flags</div>');
+          return;
+        }
+
+        const capabilities = await self.ai.languageModel.capabilities();
+        
+        if (capabilities.available === 'readily') {
+          showResult('download-result', 
+            '<div class="status success">✅ Model already downloaded and ready!</div>');
+          return;
+        }
+        
+        if (capabilities.available === 'no') {
+          showResult('download-result', 
+            '<div class="status error">❌ Model not supported on this device</div>');
+          return;
+        }
+
+        let html = '<div class="status info">⏳ Initiating download... This may take 5-10 minutes.</div>';
+        html += '<p>Watch your console (F12) for progress updates.</p>';
+        showResult('download-result', html);
+
+        const session = await self.ai.languageModel.create({
+          monitor(m) {
+            m.addEventListener("downloadprogress", (e) => {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              console.log(`Download progress: ${percent}% (${e.loaded}/${e.total} bytes)`);
+              
+              let progressHtml = '<div class="status info">⏳ Downloading...</div>';
+              progressHtml += `<p><strong>Progress:</strong> ${percent}%</p>`;
+              progressHtml += `<p><strong>Downloaded:</strong> ${(e.loaded / 1024 / 1024).toFixed(2)} MB / ${(e.total / 1024 / 1024).toFixed(2)} MB</p>`;
+              showResult('download-result', progressHtml);
+            });
+          }
+        });
+
+        await session.destroy();
+        
+        showResult('download-result', 
+          '<div class="status success">✅ Download complete! Refresh this page to verify.</div>');
+        
+      } catch (error) {
+        showResult('download-result', 
+          `<div class="status error">❌ Error: ${error.message}</div><p>Try manually: chrome://components → "Optimization Guide On Device Model" → "Check for update"</p>`);
+      }
+    }
+
+    // Auto-run availability check on load
+    window.addEventListener('load', () => {
+      checkAvailability();
+    });
+  </script>
+</body>
+</html>

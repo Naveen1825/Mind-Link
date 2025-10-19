@@ -19,7 +19,7 @@
     window.__notesio_summaryPanel.setSummaryLoading();
     try {
       const prompt = `Read the following webpage content and write a concise, well-organized Markdown summary.\n\nFollow this structure:\n\n**1. Introduction:** Begin with one sentence that states the author (if available), title, and the main purpose or argument of the text.\n\n**2. Main Points:** Present the key ideas and arguments in logical order, reflecting the structure of the original (introduction, body, conclusion if applicable).\n\n**3. Supporting Evidence:** Briefly mention the strongest evidence, examples, or data that support each main point ΓÇö skip minor details or repetition.\n\n**4. Concise Language:** Use your own clear, neutral wording. Avoid copying text directly unless essential and quoted accurately.\n\n**5. Objectivity:** Do not add personal opinions, interpretations, or new information.\n\n**6. Conclusion:** End with one short sentence that restates or encapsulates the textΓÇÖs central message.\n\nFormat the output **only in Markdown** (with clear headings and bullet points) and keep it **under ~1200 characters**.\n\nContent:\n${pageText}`;
-      let text = await window.__notesio_api.callChromeAI(prompt);
+      let text = await window.__notesio_api.callGemini(prompt);
       const lines = text.split('\n');
       if (lines.length > 30) text = lines.slice(0, 30).join('\n');
       if (text.length > 1200) text = text.slice(0, 1200) + 'ΓÇª';

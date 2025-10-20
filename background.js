@@ -8,6 +8,10 @@
 
 const DNR_MAX_RULES = 1000;
 
+// Rate limiting for screenshot capture (Chrome allows max 2 per second)
+let lastScreenshotTime = 0;
+const SCREENSHOT_MIN_INTERVAL = 1000; // 1 second between captures (safe buffer)
+
 // Chrome AI API Handler (Service Worker has access to AI APIs)
 async function handleAIRequest(request) {
   console.log('[Background] Handling AI request:', request.action);
@@ -53,6 +57,31 @@ async function handleAIRequest(request) {
         return { success: true, result: result.trim() };
       } else {
         throw new Error('Summarizer API not available in service worker context');
+      }
+    }
+
+    if (request.action === 'analyzeScreenshot') {
+      if (typeof LanguageModel !== 'undefined') {
+        console.log('[Background] Analyzing screenshot for phishing');
+
+        const createOptions = {
+          temperature: request.temperature || 0.7,
+          topK: request.topK || 3
+        };
+
+        if (request.systemPrompt) {
+          createOptions.initialPrompts = [
+            { role: 'system', content: request.systemPrompt }
+          ];
+        }
+
+        const session = await LanguageModel.create(createOptions);
+        const result = await session.prompt(request.prompt);
+        session.destroy();
+        console.log('[Background] Visual analysis completed');
+        return { success: true, result: result.trim() };
+      } else {
+        throw new Error('LanguageModel API not available for visual analysis');
       }
     }
 
@@ -145,6 +174,75 @@ async function applyDynamicRulesForHost(host, urlFilters) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
+    // Handle screenshot capture request
+    if (msg && msg.type === 'CAPTURE_SCREENSHOT') {
+      try {
+        if (!sender.tab || !sender.tab.id) {
+          console.warn('[Background] Screenshot request without valid tab ID');
+          sendResponse({ success: false, error: 'No tab ID available' });
+          return;
+        }
+
+        // Rate limiting: ensure minimum interval between captures
+        const now = Date.now();
+        const timeSinceLastCapture = now - lastScreenshotTime;
+        if (timeSinceLastCapture < SCREENSHOT_MIN_INTERVAL) {
+          const waitTime = SCREENSHOT_MIN_INTERVAL - timeSinceLastCapture;
+          console.log(`[Background] Rate limiting: waiting ${waitTime}ms before capture`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+
+        // Get tab info and validate state
+        const tab = await chrome.tabs.get(sender.tab.id);
+        
+        // Check if tab is fully loaded
+        if (tab.status !== 'complete') {
+          console.warn('[Background] Tab not fully loaded, status:', tab.status);
+          sendResponse({ success: false, error: 'Tab not fully loaded' });
+          return;
+        }
+
+        // Check if the tab URL is capturable (not chrome:// or extension pages)
+        const uncapturableProtocols = ['chrome://', 'chrome-extension://', 'about:', 'edge://'];
+        if (uncapturableProtocols.some(p => tab.url?.startsWith(p))) {
+          console.warn('[Background] Cannot capture screenshot of system page');
+          sendResponse({ success: false, error: 'Cannot capture system pages' });
+          return;
+        }
+
+        // Ensure tab is visible in the current window
+        if (!tab.active) {
+          console.warn('[Background] Tab is not active - may not have activeTab permission');
+          // Try to make it active first (requires user interaction)
+          try {
+            await chrome.tabs.update(tab.id, { active: true });
+            await new Promise(resolve => setTimeout(resolve, 300)); // Wait for activation
+          } catch (e) {
+            console.warn('[Background] Could not activate tab:', e.message);
+            sendResponse({ success: false, error: 'Tab activation required for screenshot' });
+            return;
+          }
+        }
+
+        // Add a small delay to ensure page is stable
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Capture screenshot - use JPEG for better reliability and smaller size
+        const screenshotDataUrl = await chrome.tabs.captureVisibleTab(
+          tab.windowId,
+          { format: 'jpeg', quality: 80 }
+        );
+
+        lastScreenshotTime = Date.now(); // Update timestamp on success
+        console.log('[Background] Screenshot captured successfully');
+        sendResponse({ success: true, screenshot: screenshotDataUrl });
+      } catch (e) {
+        console.error('[Background] Screenshot capture failed:', e);
+        sendResponse({ success: false, error: String(e.message || e) });
+      }
+      return;
+    }
+
     // Handle AI API requests from content scripts
     if (msg && msg.type === 'AI_REQUEST') {
       const result = await handleAIRequest(msg);

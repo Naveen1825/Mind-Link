@@ -1,6 +1,6 @@
 # PhishGuard Vision - Copilot Instructions
 
-# IMPORTANT: Follow these documentations folder for detailed API specs and usage guidelines.
+# IMPORTANT: Follow the "documentations" folder for detailed API specs and usage guidelines.
 
 ## 1. Project Goal
 Build a Chrome extension for visual phishing detection, specifically designed to protect elderly users who may have low technical literacy.
@@ -26,4 +26,4 @@ Build a Chrome extension for visual phishing detection, specifically designed to
 2.  *File Structure:* Keep individual file length to a minimum. Do not create any .md files other than this one.
 3.  *API Usage:* You *must* exclusively use the official Chrome Extension APIs and built-in Gemini Nano APIs (Prompt, Summarizer, Translator, etc.).
 4.  *No Third-Party APIs:* Do not use any other third-party libraries, external APIs, or generic Gemini APIs for the core AI functionality.
-5.  *Documentation:* Do not create .md files other than this one unless explicitly instructed.
+5.  *Documentation:* Do not create .md files other than this.

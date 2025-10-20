@@ -1,5 +1,5 @@
 ﻿// Summarization feature: message handling and API call
-(function(){
+(function () {
   let summarizing = false;
 
   function collectPageText() {
@@ -9,19 +9,19 @@
     } catch (e) { return ""; }
   }
 
-  async function summarizePage(){
+  async function summarizePage() {
     const pageText = collectPageText();
     if (!pageText) {
       window.__notesio_summaryPanel.setSummaryText("No readable content found on this page.");
       return;
     }
-    
+
     // Check if extension context is valid
     if (window.location.protocol === 'file:') {
       window.__notesio_summaryPanel.setSummaryText("⚠️ Summarization not available on local files. Please test on a real website (e.g., Wikipedia).");
       return;
     }
-    
+
     summarizing = true;
     window.__notesio_summaryPanel.setSummaryLoading();
     try {

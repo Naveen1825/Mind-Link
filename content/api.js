@@ -23,16 +23,37 @@
   async function callChromeAI(promptText, options = {}) {
     try {
       if (!isChromeAIAvailable()) {
-        throw new Error("LanguageModel API not available. Enable chrome://flags and download model.");
+        throw new Error("LanguageModel API not available. Enable chrome://flags/#prompt-api-for-gemini-nano and download model.");
       }
 
       console.log("[Mind-Link] Calling LanguageModel API with prompt:", promptText.slice(0, 100));
+
+      // Check availability status before creating session
+      const availability = await LanguageModel.availability();
+      console.log("[Mind-Link] LanguageModel availability:", availability);
+
+      if (availability === 'no') {
+        throw new Error("LanguageModel not available on this device. Check chrome://on-device-internals for requirements.");
+      }
+
+      if (availability === 'after-download') {
+        console.log("[Mind-Link] Model needs to be downloaded. Initiating download...");
+      }
 
       const createOptions = {};
       if (options.systemPrompt) {
         createOptions.initialPrompts = [
           { role: 'system', content: options.systemPrompt }
         ];
+      }
+
+      // Add download progress monitoring if downloading
+      if (availability === 'after-download') {
+        createOptions.monitor = (m) => {
+          m.addEventListener('downloadprogress', (e) => {
+            console.log(`[Mind-Link] Model download progress: ${Math.round(e.loaded * 100)}%`);
+          });
+        };
       }
 
       const session = await LanguageModel.create(createOptions);
@@ -54,10 +75,15 @@
       return result.trim();
 
     } catch (error) {
-      console.error("[Mind-Link] Chrome AI error:", error);
+      // Properly handle DOMException and other error types
+      const errorMessage = error instanceof DOMException
+        ? `${error.name}: ${error.message}`
+        : error.message || String(error);
+
+      console.error("[Mind-Link] Chrome AI error:", errorMessage, error);
 
       // Try to use streamingPrompt as fallback
-      if (error.message.includes('timeout')) {
+      if (errorMessage.includes('timeout')) {
         console.log("[Mind-Link] Trying streamingPrompt fallback...");
         try {
           const createOptions = {};
@@ -80,11 +106,14 @@
           console.log("[Mind-Link] Streaming response received:", fullResponse.slice(0, 100));
           return fullResponse.trim();
         } catch (streamError) {
-          console.error("[Mind-Link] Streaming also failed:", streamError);
+          const streamErrorMsg = streamError instanceof DOMException
+            ? `${streamError.name}: ${streamError.message}`
+            : streamError.message || String(streamError);
+          console.error("[Mind-Link] Streaming also failed:", streamErrorMsg, streamError);
         }
       }
 
-      throw new Error(`Chrome AI failed: ${error.message}`);
+      throw new Error(`Chrome AI failed: ${errorMessage}`);
     }
   }
 
@@ -118,9 +147,13 @@
       return result.trim();
 
     } catch (error) {
-      console.error("Summarizer error:", error);
+      const errorMessage = error instanceof DOMException
+        ? `${error.name}: ${error.message}`
+        : error.message || String(error);
+
+      console.error("[Mind-Link] Summarizer error:", errorMessage, error);
       // Fallback to Prompt API
-      console.log("Falling back to Prompt API for summarization...");
+      console.log("[Mind-Link] Falling back to Prompt API for summarization...");
       const prompt = `Summarize the following text concisely in markdown format:\n\n${text.slice(0, 15000)}`;
       return await callChromeAI(prompt);
     }
@@ -201,10 +234,14 @@
       }));
 
     } catch (error) {
-      console.log(`[Mind-Link MAIN] Sending error for ${requestId}:`, error.message);
+      const errorMessage = error instanceof DOMException
+        ? `${error.name}: ${error.message}`
+        : error.message || String(error);
+
+      console.log(`[Mind-Link MAIN] Sending error for ${requestId}:`, errorMessage);
 
       document.dispatchEvent(new CustomEvent('__notesio_api_response', {
-        detail: { requestId, error: error.message }
+        detail: { requestId, error: errorMessage }
       }));
     }
   });

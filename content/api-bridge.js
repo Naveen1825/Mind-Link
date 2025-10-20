@@ -17,7 +17,7 @@
     console.log('[Mind-Link Bridge] api.js injected into MAIN world');
     this.remove();
   };
-  script.onerror = function(err) {
+  script.onerror = function (err) {
     console.error('[Mind-Link Bridge] Failed to load api.js:', err);
     window.__notesio_apiAvailable = false;
   };

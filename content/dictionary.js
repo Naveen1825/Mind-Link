@@ -1,5 +1,5 @@
 // Dictionary feature: selection UI and API call
-(function(){
+(function () {
   let selectionButton = null;
 
   function setButtonLoading() {
@@ -35,41 +35,41 @@
   async function fetchDefinition(word) {
     try {
       setButtonLoading();
-      
+
       // Check if extension context is valid (skip on file:// URLs)
       if (window.location.protocol === 'file:') {
         setButtonAsDefinition('⚠️ Dictionary not available on local files. Please test on a real website.');
         return;
       }
-      
+
       // Check if Chrome AI is available
       if (!window.__notesio_apiAvailable) {
         setButtonAsDefinition('⚠️ Chrome AI not available. Please check console (F12) for details.');
         return;
       }
-      
+
       console.log('[Dictionary] Calling Chrome AI for word:', word);
-      
+
       const prompt = `Define "${word}" in 1-2 simple sentences.`;
-      
+
       // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
       );
-      
+
       const text = await Promise.race([
         window.__notesio_api.callChromeAI(prompt),
         timeoutPromise
       ]);
-      
+
       console.log('[Dictionary] Received response:', text);
       setButtonAsDefinition(text || 'No definition found.');
     } catch (err) {
       console.error('[Dictionary] Chrome AI error:', err);
       console.error('[Dictionary] Error details:', err.message, err.stack);
-      
+
       let errorMsg = 'Error: ' + err.message;
-      
+
       if (err.message.includes('Extension context invalidated')) {
         errorMsg = '⚠️ Extension reloaded. Please refresh this page.';
       } else if (err.message.includes('not available') || err.message.includes('not supported')) {
@@ -81,7 +81,7 @@
       } else if (err.message.includes('LanguageModel is not defined')) {
         errorMsg = '⚠️ LanguageModel API not available. Enable chrome://flags';
       }
-      
+
       setButtonAsDefinition(errorMsg);
     }
   }

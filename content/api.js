@@ -37,12 +37,12 @@
 
       const session = await LanguageModel.create(createOptions);
 
-      console.log("[Mind-Link] Session created, prompting with timeout...");
+      console.log("[Mind-Link] Session created, prompting with extended timeout...");
 
-      // Use Promise.race to add a timeout to the prompt call
+      // Use Promise.race to add a timeout to the prompt call (increased to 45s)
       const promptPromise = session.prompt(promptText);
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Prompt execution timeout')), 25000)
+        setTimeout(() => reject(new Error('Prompt execution timeout')), 45000)
       );
 
       const result = await Promise.race([promptPromise, timeoutPromise]);

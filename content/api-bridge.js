@@ -2,12 +2,24 @@
 (function () {
   console.log('[Mind-Link Bridge] Initializing...');
 
+  // Skip initialization on file:// URLs to prevent extension context errors
+  if (window.location.protocol === 'file:') {
+    console.log('[Mind-Link Bridge] Skipping on file:// URLs');
+    window.__notesio_apiAvailable = false;
+    window.__notesio_summarizerAvailable = false;
+    return;
+  }
+
   // Inject api.js into MAIN world (where AI APIs are available)
   const script = document.createElement('script');
   script.src = chrome.runtime.getURL('content/api.js');
   script.onload = function () {
     console.log('[Mind-Link Bridge] api.js injected into MAIN world');
     this.remove();
+  };
+  script.onerror = function(err) {
+    console.error('[Mind-Link Bridge] Failed to load api.js:', err);
+    window.__notesio_apiAvailable = false;
   };
   (document.head || document.documentElement).appendChild(script);
 

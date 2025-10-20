@@ -15,10 +15,18 @@
       window.__notesio_summaryPanel.setSummaryText("No readable content found on this page.");
       return;
     }
+    
+    // Check if extension context is valid
+    if (window.location.protocol === 'file:') {
+      window.__notesio_summaryPanel.setSummaryText("⚠️ Summarization not available on local files. Please test on a real website (e.g., Wikipedia).");
+      return;
+    }
+    
     summarizing = true;
     window.__notesio_summaryPanel.setSummaryLoading();
     try {
-      const prompt = `Read the following webpage content and write a concise, well-organized Markdown summary.\n\nFollow this structure:\n\n**1. Introduction:** Begin with one sentence that states the author (if available), title, and the main purpose or argument of the text.\n\n**2. Main Points:** Present the key ideas and arguments in logical order, reflecting the structure of the original (introduction, body, conclusion if applicable).\n\n**3. Supporting Evidence:** Briefly mention the strongest evidence, examples, or data that support each main point ΓÇö skip minor details or repetition.\n\n**4. Concise Language:** Use your own clear, neutral wording. Avoid copying text directly unless essential and quoted accurately.\n\n**5. Objectivity:** Do not add personal opinions, interpretations, or new information.\n\n**6. Conclusion:** End with one short sentence that restates or encapsulates the textΓÇÖs central message.\n\nFormat the output **only in Markdown** (with clear headings and bullet points) and keep it **under ~1200 characters**.\n\nContent:\n${pageText}`;
+      // Simplified prompt for faster response
+      const prompt = `Summarize this webpage in 3-5 bullet points using Markdown. Be concise and focus on main ideas only:\n\n${pageText.slice(0, 8000)}`;
       let text = await window.__notesio_api.callChromeAI(prompt);
       const lines = text.split('\n');
       if (lines.length > 30) text = lines.slice(0, 30).join('\n');
@@ -26,7 +34,13 @@
       window.__notesio_summaryPanel.setSummaryText(text || "No summary available.");
     } catch (e) {
       console.error("Summarize error:", e);
-      window.__notesio_summaryPanel.setSummaryText("Error summarizing page.");
+      let errorMsg = "Error summarizing page.";
+      if (e.message && e.message.includes('timeout')) {
+        errorMsg = "⏱️ Summarization timed out. Page might be too long. Try a shorter article.";
+      } else if (e.message && e.message.includes('Extension context invalidated')) {
+        errorMsg = "⚠️ Extension was reloaded. Please refresh this page and try again.";
+      }
+      window.__notesio_summaryPanel.setSummaryText(errorMsg);
     } finally { summarizing = false; }
   }
 

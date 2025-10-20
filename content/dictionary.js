@@ -36,6 +36,12 @@
     try {
       setButtonLoading();
       
+      // Check if extension context is valid (skip on file:// URLs)
+      if (window.location.protocol === 'file:') {
+        setButtonAsDefinition('⚠️ Dictionary not available on local files. Please test on a real website.');
+        return;
+      }
+      
       // Check if Chrome AI is available
       if (!window.__notesio_apiAvailable) {
         setButtonAsDefinition('⚠️ Chrome AI not available. Please check console (F12) for details.');
@@ -44,7 +50,7 @@
       
       console.log('[Dictionary] Calling Chrome AI for word:', word);
       
-      const prompt = `Provide a concise dictionary-style definition for the word: "${word}". Keep it to two or three short sentences, plain text.`;
+      const prompt = `Define "${word}" in 1-2 simple sentences.`;
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => 
@@ -64,7 +70,9 @@
       
       let errorMsg = 'Error: ' + err.message;
       
-      if (err.message.includes('not available') || err.message.includes('not supported')) {
+      if (err.message.includes('Extension context invalidated')) {
+        errorMsg = '⚠️ Extension reloaded. Please refresh this page.';
+      } else if (err.message.includes('not available') || err.message.includes('not supported')) {
         errorMsg = '⚠️ Chrome AI unavailable. Check console (F12) for details.';
       } else if (err.message.includes('downloading') || err.message.includes('after-download')) {
         errorMsg = '⏳ AI model downloading... Try again later.';

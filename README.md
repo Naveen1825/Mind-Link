@@ -59,7 +59,7 @@ Dynamic ad blocking that learns patterns instead of using static lists:
 
 ---
 
-### Test Hidden Fee Detection
+### 3. Test Hidden Fee Detection
 - Visit subscription sites with long T&C
 - Look for inline warnings about auto-renewals
 - Verify T&C is condensed (5000+ words → 200 words summary)

@@ -136,6 +136,16 @@
         throw new Error("Summarizer not available on this device");
       }
 
+      // Estimate token count (rough: 1 token ≈ 4 characters)
+      const estimatedTokens = text.length / 4;
+      const MAX_TOKENS = 3500; // Safe limit to avoid QuotaExceededError
+      
+      // If text is too large, chunk it
+      if (estimatedTokens > MAX_TOKENS) {
+        console.log(`[Mind-Link] Text too large (${estimatedTokens} tokens). Chunking...`);
+        return await summarizeInChunks(text, options);
+      }
+
       const summarizer = await Summarizer.create({
         type: options.type || "tldr",
         format: options.format || "markdown",
@@ -154,11 +164,78 @@
         : error.message || String(error);
 
       console.error("[Mind-Link] Summarizer error:", errorMessage, error);
+      
+      // If quota exceeded, try chunking
+      if (error.name === 'QuotaExceededError') {
+        console.log("[Mind-Link] Quota exceeded. Trying chunk-based summarization...");
+        try {
+          return await summarizeInChunks(text, options);
+        } catch (chunkError) {
+          console.error("[Mind-Link] Chunking also failed:", chunkError);
+        }
+      }
+      
       // Fallback to Prompt API
       console.log("[Mind-Link] Falling back to Prompt API for summarization...");
-      const prompt = `Summarize the following text concisely in markdown format:\n\n${text.slice(0, 15000)}`;
+      const prompt = `Summarize the following text concisely in 200 words or less:\n\n${text.slice(0, 15000)}`;
       return await callChromeAI(prompt);
     }
+  }
+
+  // Helper: Summarize large text in chunks
+  async function summarizeInChunks(text, options = {}) {
+    const MAX_CHUNK_SIZE = 14000; // ~3500 tokens
+    const chunks = [];
+    
+    // Split text into chunks by paragraphs to maintain context
+    const paragraphs = text.split(/\n\n+/);
+    let currentChunk = '';
+    
+    for (const para of paragraphs) {
+      if ((currentChunk + para).length > MAX_CHUNK_SIZE) {
+        if (currentChunk) chunks.push(currentChunk);
+        currentChunk = para;
+      } else {
+        currentChunk += (currentChunk ? '\n\n' : '') + para;
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk);
+    
+    console.log(`[Mind-Link] Split into ${chunks.length} chunks`);
+    
+    // Summarize each chunk
+    const summarizer = await Summarizer.create({
+      type: options.type || "tldr",
+      format: options.format || "markdown",
+      length: "short" // Use short length for chunks
+    });
+    
+    const chunkSummaries = [];
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`[Mind-Link] Summarizing chunk ${i + 1}/${chunks.length}...`);
+      try {
+        const summary = await summarizer.summarize(chunks[i]);
+        chunkSummaries.push(summary);
+      } catch (error) {
+        console.warn(`[Mind-Link] Failed to summarize chunk ${i + 1}:`, error);
+        // Include original text if chunk summarization fails
+        chunkSummaries.push(chunks[i].slice(0, 500) + '...');
+      }
+    }
+    
+    // Combine summaries
+    const combined = chunkSummaries.join('\n\n');
+    
+    // If combined is still too long, summarize the summaries
+    if (combined.length > MAX_CHUNK_SIZE) {
+      console.log('[Mind-Link] Combined summaries too long. Final condensation...');
+      const final = await summarizer.summarize(combined);
+      summarizer.destroy();
+      return final.trim();
+    }
+    
+    summarizer.destroy();
+    return combined.trim();
   }
 
   // Chrome Translator API wrapper (for jargon simplification)
@@ -166,6 +243,52 @@
     // Fallback to Prompt API
     const prompt = `Rewrite the following text in simple, easy-to-understand language suitable for elderly users with low technical literacy. Remove jargon and use plain language:\n\n${text}`;
     return await callChromeAI(prompt);
+  }
+
+  // Chrome Rewriter API wrapper (for T&C simplification)
+  async function rewriteText(text, options = {}) {
+    try {
+      if (!isRewriterAvailable()) {
+        throw new Error("Rewriter API not available");
+      }
+
+      console.log("[Mind-Link] Calling Rewriter API");
+
+      // Check availability before creating
+      const availability = await Rewriter.availability();
+      console.log("[Mind-Link] Rewriter availability:", availability);
+
+      if (availability === 'no') {
+        throw new Error("Rewriter not available on this device");
+      }
+
+      const rewriter = await Rewriter.create({
+        tone: options.tone || "more-casual",
+        format: options.format || "plain-text",
+        length: options.length || "shorter",
+        sharedContext: options.sharedContext || "Rewrite in simple language that a 5th grader can understand"
+      });
+
+      const result = await rewriter.rewrite(text, {
+        context: options.context || ""
+      });
+      
+      rewriter.destroy();
+
+      console.log("[Mind-Link] Received rewriter response");
+      return result.trim();
+
+    } catch (error) {
+      const errorMessage = error instanceof DOMException
+        ? `${error.name}: ${error.message}`
+        : error.message || String(error);
+
+      console.error("[Mind-Link] Rewriter error:", errorMessage, error);
+      // Fallback to Prompt API
+      console.log("[Mind-Link] Falling back to Prompt API for rewriting...");
+      const prompt = `Rewrite this text in simple, honest language that a 5th grader can understand. Keep the same meaning but remove confusing words and expose any hidden tricks:\n\n${text.slice(0, 10000)}`;
+      return await callChromeAI(prompt);
+    }
   }
 
   // Export API functions
@@ -177,6 +300,7 @@
     // Specialized functions
     summarizeText,
     simplifyJargon,
+    rewriteText,
 
     // Feature detection (return values, not functions, since isolated world can't call MAIN world functions)
     isChromeAIAvailable: () => isChromeAIAvailable(),
@@ -186,7 +310,8 @@
 
     // Store availability as properties too
     __apiAvailable: isChromeAIAvailable(),
-    __summarizerAvailable: isSummarizerAvailable()
+    __summarizerAvailable: isSummarizerAvailable(),
+    __rewriterAvailable: isRewriterAvailable()
   };
 
   // Dispatch custom event to notify isolated world scripts
@@ -222,6 +347,8 @@
             return await summarizeText(text, options);
           case 'simplifyJargon':
             return await simplifyJargon(text, options);
+          case 'rewriteText':
+            return await rewriteText(text, options);
           default:
             throw new Error(`Unknown request type: ${type}`);
         }

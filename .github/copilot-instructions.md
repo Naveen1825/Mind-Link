@@ -2,6 +2,8 @@
 
 # IMPORTANT: Follow the "documentations" folder for detailed API specs and usage guidelines.
 
+# Dont create any additional .md files without permission.
+
 ## 1. Project Goal & Core Theme
 **Mission:** Protect vulnerable users (especially elderly) from online phishing, scams, and deceptive practices using Chrome's Built-in AI.
 
@@ -617,32 +619,6 @@ Mind-Link/
 - 👪 Family Dashboard - (If time allows) Optional guardian notifications
 
 **Focus NOW:** Get the 3 core features (Prompt + Summarizer + Rewriter) working flawlessly. These alone will win the hackathon.
-
----
-
-## 10. Final Development Checklist
-
-### **Week 1: Core Features (Already Built)**
-- ✅ Phishing Detection (Prompt API - domain, text, visual)
-- ✅ Trust Score System (confidence-weighted algorithm)
-- ✅ Warning UI (red/orange/yellow/green banners)
-- ✅ Ad Blocking (Prompt API + declarativeNetRequest)
-
-### **Week 2: New Features (6 days)**
-- [ ] Terms Analyzer (Summarizer API + Prompt API) - 3 days
-- [ ] Language Simplifier (Rewriter API + Prompt API) - 3 days
-
-### **Week 3: Polish & Testing**
-- [ ] Test all 3 APIs on real websites
-- [ ] Fix bugs, optimize performance
-- [ ] Create demo scenarios (fake sites for video)
-- [ ] Write README.md with API explanations
-
-### **Week 4: Demo Video & Submission**
-- [ ] Record 3-minute demo video
-- [ ] Write text description (300-500 words)
-- [ ] Polish GitHub repo (clean commits, good README)
-- [ ] Submit to hackathon platform
 
 ---
 

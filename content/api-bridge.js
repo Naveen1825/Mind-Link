@@ -125,6 +125,30 @@
           }
         }, 30000);
       });
+    },
+
+    async rewriteText(text, options = {}) {
+      const requestId = `req_${++requestCounter}_${Date.now()}`;
+
+      return new Promise((resolve, reject) => {
+        pendingRequests.set(requestId, { resolve, reject });
+
+        document.dispatchEvent(new CustomEvent('__notesio_api_request', {
+          detail: {
+            requestId,
+            type: 'rewriteText',
+            text,
+            options
+          }
+        }));
+
+        setTimeout(() => {
+          if (pendingRequests.has(requestId)) {
+            pendingRequests.delete(requestId);
+            reject(new Error('Request timeout'));
+          }
+        }, 30000);
+      });
     }
   };
 

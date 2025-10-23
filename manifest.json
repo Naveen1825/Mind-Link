@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Mind-Link - PhishGuard Vision",
-  "version": "3.0.2",
-  "description": "Chrome extension with bulletproof ad blocking, visual phishing detection, and jargon simplification to protect elderly users.",
+  "version": "3.1.0",
+  "description": "Chrome extension with bulletproof ad blocking, visual phishing detection, hidden fee detection, and jargon simplification to protect elderly users.",
   "host_permissions": [
     "<all_urls>"
   ],
@@ -50,7 +50,8 @@
         "content/cosmetic.js",
         "content/ads-learner.js",
         "content/phishing-detector.js",
-        "content/jargon-simplifier.js"
+        "content/jargon-simplifier.js",
+        "content/terms-analyzer.js"
       ],
       "run_at": "document_start"
     }

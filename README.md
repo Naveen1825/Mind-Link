@@ -59,6 +59,44 @@ Dynamic ad blocking that learns patterns instead of using static lists:
 
 ---
 
+### 3. **Hidden Fee Detector with T&C Simplification** 💰
+**APIs Used:** Summarizer API + Rewriter API + Prompt API (Three-Stage Pipeline)
+
+Protects users from subscription traps hidden in complex Terms & Conditions:
+
+**How It Works:**
+1. **Stage 1 - Summarizer API:** Condenses 5000+ word T&C to ~200 words
+2. **Stage 2 - Rewriter API:** Simplifies legal jargon to plain, elderly-friendly language
+3. **Stage 3 - Prompt API:** Analyzes simplified text for hidden fees and traps
+
+**Detects:**
+- Auto-renewal clauses (surprise $99/month charges)
+- Hidden fees after trial period
+- Non-refundable charges
+- Difficult cancellation requirements
+- Early termination fees
+- Price increases without notice
+
+**User Experience:**
+- Automatically detects T&C pages and links
+- Shows inline warning banner with key findings
+- "View Full Analysis" button opens detailed modal showing all 3 stages
+- 24-hour caching for performance
+
+**Example Warning:**
+```
+⚠️ WARNING: Hidden Fees Detected!
+
+• $1 trial auto-renews at $99.99/month
+• Must cancel 7 days before renewal or charged
+• Early termination fee: $600
+• All charges non-refundable
+
+[View Full Analysis] [Dismiss]
+```
+
+---
+
 ### 3. Test Hidden Fee Detection
 - Visit subscription sites with long T&C
 - Look for inline warnings about auto-renewals

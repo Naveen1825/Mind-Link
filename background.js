@@ -1,4 +1,5 @@
 // Background service worker: persists learned ad rules and applies dynamic DNR rules
+// Also handles Chrome AI API calls (service workers have access to AI APIs)
 // Storage schema (chrome.storage.local):
 // {
 //   ad_rules: { [host: string]: { selectors: string[], urlFilters: string[], ruleIds: number[] } },
@@ -6,6 +7,102 @@
 // }
 
 const DNR_MAX_RULES = 1000;
+
+// Rate limiting for screenshot capture (Chrome allows max 2 per second)
+let lastScreenshotTime = 0;
+const SCREENSHOT_MIN_INTERVAL = 1000; // 1 second between captures (safe buffer)
+
+// Chrome AI API Handler (Service Worker has access to AI APIs)
+async function handleAIRequest(request) {
+  console.log('[Background] Handling AI request:', request.action);
+
+  try {
+    if (request.action === 'callLanguageModel') {
+      if (typeof LanguageModel !== 'undefined') {
+        console.log('[Background] Using LanguageModel API');
+
+        const createOptions = {
+          temperature: request.temperature || 0.7,
+          topK: request.topK || 3
+        };
+
+        // Add initialPrompts if systemPrompt is provided
+        if (request.systemPrompt) {
+          createOptions.initialPrompts = [
+            { role: 'system', content: request.systemPrompt }
+          ];
+        }
+
+        const session = await LanguageModel.create(createOptions);
+        const result = await session.prompt(request.prompt);
+        session.destroy();
+        console.log('[Background] AI response received:', result.slice(0, 100));
+        return { success: true, result: result.trim() };
+      } else {
+        throw new Error('LanguageModel API not available in service worker context');
+      }
+    }
+
+    if (request.action === 'callSummarizer') {
+      if (typeof Summarizer !== 'undefined') {
+        console.log('[Background] Using Summarizer API');
+        const summarizer = await Summarizer.create({
+          type: request.type || 'tldr',
+          format: request.format || 'markdown',
+          length: request.length || 'medium'
+        });
+        const result = await summarizer.summarize(request.text);
+        summarizer.destroy();
+        console.log('[Background] Summarizer response received:', result.slice(0, 100));
+        return { success: true, result: result.trim() };
+      } else {
+        throw new Error('Summarizer API not available in service worker context');
+      }
+    }
+
+    if (request.action === 'analyzeScreenshot') {
+      if (typeof LanguageModel !== 'undefined') {
+        console.log('[Background] Analyzing screenshot for phishing');
+
+        const createOptions = {
+          temperature: request.temperature || 0.7,
+          topK: request.topK || 3
+        };
+
+        if (request.systemPrompt) {
+          createOptions.initialPrompts = [
+            { role: 'system', content: request.systemPrompt }
+          ];
+        }
+
+        const session = await LanguageModel.create(createOptions);
+        const result = await session.prompt(request.prompt);
+        session.destroy();
+        console.log('[Background] Visual analysis completed');
+        return { success: true, result: result.trim() };
+      } else {
+        throw new Error('LanguageModel API not available for visual analysis');
+      }
+    }
+
+    if (request.action === 'checkAIAvailability') {
+      return {
+        success: true,
+        available: {
+          languageModel: typeof LanguageModel !== 'undefined',
+          summarizer: typeof Summarizer !== 'undefined',
+          translator: typeof Translator !== 'undefined',
+          rewriter: typeof Rewriter !== 'undefined'
+        }
+      };
+    }
+
+    throw new Error('Unknown AI action: ' + request.action);
+  } catch (error) {
+    console.error('[Background] AI request error:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 async function getLocal(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
@@ -77,6 +174,78 @@ async function applyDynamicRulesForHost(host, urlFilters) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
+    // Handle screenshot capture request
+    if (msg && msg.type === 'CAPTURE_SCREENSHOT') {
+      try {
+        if (!sender.tab || !sender.tab.id) {
+          console.warn('[Background] Screenshot request without valid tab ID');
+          sendResponse({ success: false, error: 'No tab ID available' });
+          return;
+        }
+
+        // Rate limiting: ensure minimum interval between captures
+        const now = Date.now();
+        const timeSinceLastCapture = now - lastScreenshotTime;
+        if (timeSinceLastCapture < SCREENSHOT_MIN_INTERVAL) {
+          const waitTime = SCREENSHOT_MIN_INTERVAL - timeSinceLastCapture;
+          console.log(`[Background] Rate limiting: waiting ${waitTime}ms before capture`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+
+        // Get tab info and validate state
+        const tab = await chrome.tabs.get(sender.tab.id);
+
+        // Check if tab is fully loaded
+        if (tab.status !== 'complete') {
+          console.warn('[Background] Tab not fully loaded, status:', tab.status);
+          sendResponse({ success: false, error: 'Tab not fully loaded' });
+          return;
+        }
+
+        // Check if the tab URL is capturable (not chrome:// or extension pages)
+        const uncapturableProtocols = ['chrome://', 'chrome-extension://', 'about:', 'edge://'];
+        if (uncapturableProtocols.some(p => tab.url?.startsWith(p))) {
+          console.warn('[Background] Cannot capture screenshot of system page');
+          sendResponse({ success: false, error: 'Cannot capture system pages' });
+          return;
+        }
+
+        // Note: chrome.tabs.captureVisibleTab captures the ACTIVE tab in the window
+        // With host_permissions: ["<all_urls>"], we can capture without user interaction
+        // But the tab MUST be visible (active) in its window
+        if (!tab.active) {
+          console.warn('[Background] Tab is not active - cannot capture visible tab');
+          console.warn('[Background] Screenshots require the tab to be visible/active');
+          sendResponse({ success: false, error: 'Tab must be visible for screenshot capture' });
+          return;
+        }
+
+        // Add a small delay to ensure page is stable
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Capture screenshot - use JPEG for better reliability and smaller size
+        const screenshotDataUrl = await chrome.tabs.captureVisibleTab(
+          tab.windowId,
+          { format: 'jpeg', quality: 80 }
+        );
+
+        lastScreenshotTime = Date.now(); // Update timestamp on success
+        console.log('[Background] Screenshot captured successfully');
+        sendResponse({ success: true, screenshot: screenshotDataUrl });
+      } catch (e) {
+        console.error('[Background] Screenshot capture failed:', e);
+        sendResponse({ success: false, error: String(e.message || e) });
+      }
+      return;
+    }
+
+    // Handle AI API requests from content scripts
+    if (msg && msg.type === 'AI_REQUEST') {
+      const result = await handleAIRequest(msg);
+      sendResponse(result);
+      return;
+    }
+
     if (msg && msg.type === 'AD_RULES_LEARNED') {
       try {
         const { host, selectors = [], urlFilters = [] } = msg.payload || {};
@@ -85,7 +254,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const state = await getLocal(['ad_rules']);
         const adRules = state.ad_rules || {};
         const existing = adRules[host] || { selectors: [], urlFilters: [], ruleIds: [] };
-        const mergedSelectors = Array.from(new Set([...(existing.selectors||[]), ...selectors.map(String)])).slice(0, 200);
+        const mergedSelectors = Array.from(new Set([...(existing.selectors || []), ...selectors.map(String)])).slice(0, 200);
         adRules[host] = { selectors: mergedSelectors, urlFilters: existing.urlFilters || [], ruleIds: existing.ruleIds || [] };
         await setLocal({ ad_rules: adRules });
         // Apply network rules
@@ -121,7 +290,7 @@ chrome.runtime.onInstalled.addListener(async () => {
         action: { type: 'block' },
         condition: {
           urlFilter: f,
-          resourceTypes: ['script','xmlhttprequest','image','sub_frame','media','font']
+          resourceTypes: ['script', 'xmlhttprequest', 'image', 'sub_frame', 'media', 'font']
         }
       });
     }

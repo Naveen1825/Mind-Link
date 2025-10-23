@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Double Click Logger",
-  "version": "1.0.2",
-  "description": "Logs double-click events and the selected word (if any) to the console.",
+  "name": "Mind-Link - PhishGuard Vision",
+  "version": "3.1.0",
+  "description": "Chrome extension with bulletproof ad blocking, visual phishing detection, hidden fee detection, and jargon simplification to protect elderly users.",
   "host_permissions": [
-    "<all_urls>",
-    "https://generativelanguage.googleapis.com/*"
+    "<all_urls>"
   ],
   "permissions": [
     "tabs",
@@ -31,22 +30,40 @@
         "id": "ruleset_extended",
         "enabled": true,
         "path": "rules/extended-blocklist.json"
+      },
+      {
+        "id": "ruleset_bulletproof",
+        "enabled": true,
+        "path": "rules/bulletproof-blocklist.json"
       }
     ]
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
+        "content/api-bridge.js",
         "content/utils.js",
-        "content/api.js",
-        "content/summaryPanel.js",
-        "content/summarize.js",
         "content/dictionary.js",
         "content/cosmetic.js",
-        "content/ads-learner.js"
+        "content/ads-learner.js",
+        "content/phishing-detector.js",
+        "content/jargon-simplifier.js",
+        "content/terms-analyzer.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/api.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

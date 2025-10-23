@@ -1,0 +1,707 @@
+[
+    {
+        "id": 200,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "pagead2.googleadservices.com",
+                "afs.googlesyndication.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "sub_frame",
+                "media"
+            ]
+        }
+    },
+    {
+        "id": 201,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "mediavisor.doubleclick.net",
+                "static.media.net",
+                "media.net"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "sub_frame"
+            ]
+        }
+    },
+    {
+        "id": 202,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "adservetx.media.net"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "sub_frame"
+            ]
+        }
+    },
+    {
+        "id": 203,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "adc3-launch.adcolony.com",
+                "events3alt.adcolony.com",
+                "ads30.adcolony.com",
+                "wd.adcolony.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "sub_frame"
+            ]
+        }
+    },
+    {
+        "id": 204,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "google-analytics.com",
+                "ssl.google-analytics.com",
+                "analytics.google.com",
+                "click.googleanalytics.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image"
+            ]
+        }
+    },
+    {
+        "id": 205,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "insights.hotjar.com",
+                "surveys.hotjar.com",
+                "events.hotjar.io",
+                "identify.hotjar.com",
+                "adm.hotjar.com",
+                "script.hotjar.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "websocket"
+            ]
+        }
+    },
+    {
+        "id": 206,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "o2.mouseflow.com",
+                "api.mouseflow.com",
+                "cdn.mouseflow.com",
+                "cdn-test.mouseflow.com",
+                "gtm.mouseflow.com",
+                "tools.mouseflow.com",
+                "mouseflow.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "websocket"
+            ]
+        }
+    },
+    {
+        "id": 207,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "claritybt.freshmarketer.com",
+                "freshmarketer.com",
+                "fwtracks.freshmarketer.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 208,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "cs.luckyorange.net",
+                "upload.luckyorange.net",
+                "luckyorange.com",
+                "settings.luckyorange.net",
+                "realtime.luckyorange.com",
+                "api.luckyorange.com",
+                "w1.luckyorange.com",
+                "cdn.luckyorange.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "websocket"
+            ]
+        }
+    },
+    {
+        "id": 209,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "stats.wp.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 210,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "sessions.bugsnag.com",
+                "notify.bugsnag.com",
+                "api.bugsnag.com",
+                "app.bugsnag.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 211,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "browser.sentry-cdn.com",
+                "app.getsentry.com",
+                "sentry.io"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 212,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "an.facebook.com",
+                "pixel.facebook.com",
+                "connect.facebook.net"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 213,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "static.ads-twitter.com",
+                "ads-api.twitter.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image"
+            ]
+        }
+    },
+    {
+        "id": 214,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "analytics.pointdrive.linkedin.com",
+                "ads.linkedin.com",
+                "px.ads.linkedin.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 215,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "trk.pinterest.com",
+                "ads.pinterest.com",
+                "analytics.pinterest.com",
+                "log.pinterest.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image"
+            ]
+        }
+    },
+    {
+        "id": 216,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "events.reddit.com",
+                "events.redditmedia.com",
+                "alb.reddit.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 217,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "ads.youtube.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "media",
+                "sub_frame"
+            ]
+        }
+    },
+    {
+        "id": 218,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "ads-api.tiktok.com",
+                "analytics.tiktok.com",
+                "ads-sg.tiktok.com",
+                "analytics-sg.tiktok.com",
+                "business-api.tiktok.com",
+                "ads.tiktok.com",
+                "log.byteoversea.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 219,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "log.fc.yahoo.com",
+                "geo.yahoo.com",
+                "udcm.yahoo.com",
+                "analytics.query.yahoo.com",
+                "analytics.yahoo.com",
+                "partnerads.ysm.yahoo.com",
+                "gemini.yahoo.com",
+                "adtech.yahooinc.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 220,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "appmetrica.yandex.ru",
+                "metrika.yandex.ru",
+                "adfstat.yandex.ru"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image"
+            ]
+        }
+    },
+    {
+        "id": 221,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "config.unityads.unity3d.com",
+                "auction.unityads.unity3d.com",
+                "webview.unityads.unity3d.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "sub_frame"
+            ]
+        }
+    },
+    {
+        "id": 222,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "bdapi-in-ads.realmemobile.com",
+                "iot-logser.realme.com",
+                "iot-eu-logser.realme.com",
+                "bdapi-ads.realmemobile.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 223,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "api.ad.xiaomi.com",
+                "data.mistat.xiaomi.com",
+                "sdkconfig.ad.xiaomi.com",
+                "sdkconfig.ad.intl.xiaomi.com",
+                "tracking.rus.miui.com",
+                "data.mistat.rus.xiaomi.com",
+                "data.mistat.india.xiaomi.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 224,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "ck.ads.oppomobile.com",
+                "adx.ads.oppomobile.com",
+                "data.ads.oppomobile.com",
+                "adsfs.oppomobile.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 225,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "grs.hicloud.com",
+                "logservice.hicloud.com",
+                "logbak.hicloud.com",
+                "logservice1.hicloud.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 226,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "smetrics.samsung.com",
+                "samsung-com.112.2o7.net",
+                "samsungads.com",
+                "analytics-api.samsunghealthcn.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 227,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "metrics.mzstatic.com",
+                "metrics.icloud.com",
+                "books-analytics-events.apple.com",
+                "notes-analytics-events.apple.com",
+                "api-adservices.apple.com",
+                "iadsdk.apple.com",
+                "weather-analytics-events.apple.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 228,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/adtrack",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping",
+                "image"
+            ]
+        }
+    },
+    {
+        "id": 229,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/analytics.js",
+            "resourceTypes": [
+                "script"
+            ]
+        }
+    },
+    {
+        "id": 230,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/gtag/js",
+            "resourceTypes": [
+                "script"
+            ]
+        }
+    },
+    {
+        "id": 231,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/beacon",
+            "resourceTypes": [
+                "ping",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 232,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/collect?",
+            "resourceTypes": [
+                "ping",
+                "xmlhttprequest",
+                "image"
+            ]
+        }
+    },
+    {
+        "id": 233,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/pixel.gif",
+            "resourceTypes": [
+                "image",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 234,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/tracking",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "ping"
+            ]
+        }
+    },
+    {
+        "id": 235,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "urlFilter": "/ad?",
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image",
+                "sub_frame"
+            ]
+        }
+    },
+    {
+        "id": 236,
+        "priority": 2,
+        "action": {
+            "type": "block"
+        },
+        "condition": {
+            "requestDomains": [
+                "adtago.s3.amazonaws.com",
+                "advice-ads.s3.amazonaws.com",
+                "analytics.s3.amazonaws.com",
+                "analyticsengine.s3.amazonaws.com"
+            ],
+            "resourceTypes": [
+                "script",
+                "xmlhttprequest",
+                "image"
+            ]
+        }
+    }
+]

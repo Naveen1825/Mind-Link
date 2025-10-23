@@ -1,59 +1,59 @@
 // Hidden Fee Detector with T&C Simplification
 // Three-stage pipeline: Summarizer → Rewriter → Prompt API
 (function () {
-  console.log('[Mind-Link Terms Analyzer] Initializing...');
+    console.log('[Mind-Link Terms Analyzer] Initializing...');
 
-  // Skip on file:// URLs
-  if (window.location.protocol === 'file:') {
-    return;
-  }
+    // Skip on file:// URLs
+    if (window.location.protocol === 'file:') {
+        return;
+    }
 
-  // Cache analyzed terms to avoid re-analysis
-  const analyzedTerms = new Set();
-  const CACHE_KEY = 'mind-link-terms-cache';
-  const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+    // Cache analyzed terms to avoid re-analysis
+    const analyzedTerms = new Set();
+    const CACHE_KEY = 'mind-link-terms-cache';
+    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-  // Load cache from storage
-  let termsCache = {};
-  try {
-    chrome.storage.local.get([CACHE_KEY], (result) => {
-      if (result[CACHE_KEY]) {
-        termsCache = result[CACHE_KEY];
-        // Clean expired cache
-        const now = Date.now();
-        Object.keys(termsCache).forEach(key => {
-          if (now - termsCache[key].timestamp > CACHE_DURATION) {
-            delete termsCache[key];
-          }
-        });
-      }
-    });
-  } catch (error) {
-    console.error('[Mind-Link Terms Analyzer] Cache load error:', error);
-  }
-
-  // Save cache to storage
-  function saveCache() {
+    // Load cache from storage
+    let termsCache = {};
     try {
-      chrome.storage.local.set({ [CACHE_KEY]: termsCache });
+        chrome.storage.local.get([CACHE_KEY], (result) => {
+            if (result[CACHE_KEY]) {
+                termsCache = result[CACHE_KEY];
+                // Clean expired cache
+                const now = Date.now();
+                Object.keys(termsCache).forEach(key => {
+                    if (now - termsCache[key].timestamp > CACHE_DURATION) {
+                        delete termsCache[key];
+                    }
+                });
+            }
+        });
     } catch (error) {
-      console.error('[Mind-Link Terms Analyzer] Cache save error:', error);
-    }
-  }
-
-  // Create warning UI
-  function createWarningBanner(findings, severity) {
-    const bannerId = 'mind-link-terms-warning';
-    
-    // Remove existing banner if any
-    const existing = document.getElementById(bannerId);
-    if (existing) {
-      existing.remove();
+        console.error('[Mind-Link Terms Analyzer] Cache load error:', error);
     }
 
-    const banner = document.createElement('div');
-    banner.id = bannerId;
-    banner.style.cssText = `
+    // Save cache to storage
+    function saveCache() {
+        try {
+            chrome.storage.local.set({ [CACHE_KEY]: termsCache });
+        } catch (error) {
+            console.error('[Mind-Link Terms Analyzer] Cache save error:', error);
+        }
+    }
+
+    // Create warning UI
+    function createWarningBanner(findings, severity) {
+        const bannerId = 'mind-link-terms-warning';
+
+        // Remove existing banner if any
+        const existing = document.getElementById(bannerId);
+        if (existing) {
+            existing.remove();
+        }
+
+        const banner = document.createElement('div');
+        banner.id = bannerId;
+        banner.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
@@ -70,10 +70,10 @@
       animation: slideIn 0.3s ease-out;
     `;
 
-    const icon = severity >= 4 ? '🛑' : severity >= 3 ? '⚠️' : 'ℹ️';
-    const title = severity >= 4 ? 'DANGER: Hidden Fees Detected!' : severity >= 3 ? 'WARNING: Potential Hidden Costs' : 'Notice: Terms Analyzed';
+        const icon = severity >= 4 ? '🛑' : severity >= 3 ? '⚠️' : 'ℹ️';
+        const title = severity >= 4 ? 'DANGER: Hidden Fees Detected!' : severity >= 3 ? 'WARNING: Potential Hidden Costs' : 'Notice: Terms Analyzed';
 
-    banner.innerHTML = `
+        banner.innerHTML = `
       <style>
         @keyframes slideIn {
           from {
@@ -119,40 +119,40 @@
       </div>
     `;
 
-    document.body.appendChild(banner);
+        document.body.appendChild(banner);
 
-    // Close button
-    document.getElementById('mind-link-terms-close').addEventListener('click', () => {
-      banner.style.animation = 'slideIn 0.3s ease-out reverse';
-      setTimeout(() => banner.remove(), 300);
-    });
+        // Close button
+        document.getElementById('mind-link-terms-close').addEventListener('click', () => {
+            banner.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => banner.remove(), 300);
+        });
 
-    // Auto-dismiss after 15 seconds for low severity
-    if (severity < 3) {
-      setTimeout(() => {
-        if (document.getElementById(bannerId)) {
-          banner.style.animation = 'slideIn 0.3s ease-out reverse';
-          setTimeout(() => banner.remove(), 300);
+        // Auto-dismiss after 15 seconds for low severity
+        if (severity < 3) {
+            setTimeout(() => {
+                if (document.getElementById(bannerId)) {
+                    banner.style.animation = 'slideIn 0.3s ease-out reverse';
+                    setTimeout(() => banner.remove(), 300);
+                }
+            }, 15000);
         }
-      }, 15000);
+
+        return banner;
     }
 
-    return banner;
-  }
+    // Create detailed analysis modal
+    function showDetailedAnalysis(summary, simplified, findings, severity) {
+        const modalId = 'mind-link-terms-modal';
 
-  // Create detailed analysis modal
-  function showDetailedAnalysis(summary, simplified, findings, severity) {
-    const modalId = 'mind-link-terms-modal';
-    
-    // Remove existing modal if any
-    const existing = document.getElementById(modalId);
-    if (existing) {
-      existing.remove();
-    }
+        // Remove existing modal if any
+        const existing = document.getElementById(modalId);
+        if (existing) {
+            existing.remove();
+        }
 
-    const modal = document.createElement('div');
-    modal.id = modalId;
-    modal.style.cssText = `
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
@@ -167,8 +167,8 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     `;
 
-    const content = document.createElement('div');
-    content.style.cssText = `
+        const content = document.createElement('div');
+        content.style.cssText = `
       background: white;
       border-radius: 12px;
       max-width: 650px;
@@ -178,32 +178,32 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.4);
     `;
 
-    const icon = severity >= 4 ? '🛑' : severity >= 3 ? '⚠️' : 'ℹ️';
-    const titleColor = severity >= 4 ? '#dc2626' : severity >= 3 ? '#f59e0b' : '#3b82f6';
+        const icon = severity >= 4 ? '🛑' : severity >= 3 ? '⚠️' : 'ℹ️';
+        const titleColor = severity >= 4 ? '#dc2626' : severity >= 3 ? '#f59e0b' : '#3b82f6';
 
-    // Shorten findings to max 5 words each
-    const shortFindings = findings.map(f => {
-      // Simplify common patterns
-      f = f.replace(/Auto-renewal clause:/gi, '').trim();
-      f = f.replace(/Hidden fee after trial period:/gi, '').trim();
-      f = f.replace(/Non-refundable charges:/gi, '').trim();
-      f = f.replace(/Automatic credit card charges:/gi, '').trim();
-      f = f.replace(/Difficult cancellation requirements:/gi, '').trim();
-      f = f.replace(/Early termination fees:/gi, '').trim();
-      f = f.replace(/Price increases without notice:/gi, '').trim();
-      
-      // Take first sentence only
-      f = f.split('.')[0].split(',')[0];
-      
-      // Limit to ~60 characters
-      if (f.length > 60) {
-        f = f.substring(0, 57) + '...';
-      }
-      
-      return f;
-    }).slice(0, 4); // Max 4 findings
+        // Shorten findings to max 5 words each
+        const shortFindings = findings.map(f => {
+            // Simplify common patterns
+            f = f.replace(/Auto-renewal clause:/gi, '').trim();
+            f = f.replace(/Hidden fee after trial period:/gi, '').trim();
+            f = f.replace(/Non-refundable charges:/gi, '').trim();
+            f = f.replace(/Automatic credit card charges:/gi, '').trim();
+            f = f.replace(/Difficult cancellation requirements:/gi, '').trim();
+            f = f.replace(/Early termination fees:/gi, '').trim();
+            f = f.replace(/Price increases without notice:/gi, '').trim();
 
-    content.innerHTML = `
+            // Take first sentence only
+            f = f.split('.')[0].split(',')[0];
+
+            // Limit to ~60 characters
+            if (f.length > 60) {
+                f = f.substring(0, 57) + '...';
+            }
+
+            return f;
+        }).slice(0, 4); // Max 4 findings
+
+        content.innerHTML = `
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
         <span style="font-size: 32px;">${icon}</span>
         <h2 style="margin: 0; color: ${titleColor}; font-size: 22px;">Terms Analysis</h2>
@@ -253,9 +253,9 @@
             ${shortFindings.length > 0 ? 'Hidden Fees & Traps Detected:' : 'Key Points:'}
           </h3>
           <div style="color: ${severity >= 4 ? '#7f1d1d' : '#78350f'}; line-height: 1.8; font-size: 14px;">
-            ${shortFindings.length > 0 
-              ? shortFindings.map(f => `• ${f}`).join('<br>') 
-              : '• No specific hidden fees detected<br>• Review full terms for details<br>• Check "In Plain English" for explanation'}
+            ${shortFindings.length > 0
+                ? shortFindings.map(f => `• ${f}`).join('<br>')
+                : '• No specific hidden fees detected<br>• Review full terms for details<br>• Check "In Plain English" for explanation'}
           </div>
           <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid ${severity >= 4 ? '#fecaca' : '#fde68a'}; font-size: 13px; color: ${severity >= 4 ? '#991b1b' : '#92400e'}; font-style: italic;">
             💡 Tip: Click "In Plain English" to understand what this means
@@ -339,175 +339,175 @@
       ">Got It</button>
     `;
 
-    modal.appendChild(content);
-    document.body.appendChild(modal);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
 
-    // Tab switching
-    const tabBtns = content.querySelectorAll('.tab-btn');
-    const tabContents = content.querySelectorAll('.tab-content');
-    
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetTab = btn.getAttribute('data-tab');
-        
-        // Update buttons
-        tabBtns.forEach(b => {
-          b.style.color = '#6b7280';
-          b.style.borderBottom = '2px solid transparent';
-          b.classList.remove('active');
-        });
-        btn.style.color = titleColor;
-        btn.style.borderBottom = `2px solid ${titleColor}`;
-        btn.classList.add('active');
-        
-        // Update content
-        tabContents.forEach(c => {
-          c.style.display = 'none';
-        });
-        content.querySelector(`[data-tab="${targetTab}"].tab-content`).style.display = 'block';
-      });
-    });
+        // Tab switching
+        const tabBtns = content.querySelectorAll('.tab-btn');
+        const tabContents = content.querySelectorAll('.tab-content');
 
-    // Set active tab styling
-    const activeBtn = content.querySelector('.tab-btn.active');
-    if (activeBtn) {
-      activeBtn.style.color = titleColor;
-      activeBtn.style.borderBottom = `2px solid ${titleColor}`;
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+
+                // Update buttons
+                tabBtns.forEach(b => {
+                    b.style.color = '#6b7280';
+                    b.style.borderBottom = '2px solid transparent';
+                    b.classList.remove('active');
+                });
+                btn.style.color = titleColor;
+                btn.style.borderBottom = `2px solid ${titleColor}`;
+                btn.classList.add('active');
+
+                // Update content
+                tabContents.forEach(c => {
+                    c.style.display = 'none';
+                });
+                content.querySelector(`[data-tab="${targetTab}"].tab-content`).style.display = 'block';
+            });
+        });
+
+        // Set active tab styling
+        const activeBtn = content.querySelector('.tab-btn.active');
+        if (activeBtn) {
+            activeBtn.style.color = titleColor;
+            activeBtn.style.borderBottom = `2px solid ${titleColor}`;
+        }
+
+        // Close handlers
+        const closeModal = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 300);
+        };
+
+        modal.style.opacity = '0';
+        modal.style.transition = 'opacity 0.3s';
+        setTimeout(() => modal.style.opacity = '1', 10);
+
+        document.getElementById('mind-link-terms-modal-close').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // ESC key to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     }
 
-    // Close handlers
-    const closeModal = () => {
-      modal.style.opacity = '0';
-      setTimeout(() => modal.remove(), 300);
-    };
+    // Helper: Clean and extract only T&C content
+    function cleanTermsText(rawText) {
+        console.log('[Mind-Link Terms Analyzer] Cleaning text. Original length:', rawText.length);
 
-    modal.style.opacity = '0';
-    modal.style.transition = 'opacity 0.3s';
-    setTimeout(() => modal.style.opacity = '1', 10);
+        // Remove excessive whitespace
+        let cleaned = rawText.replace(/\s+/g, ' ').trim();
 
-    document.getElementById('mind-link-terms-modal-close').addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
-    
-    // ESC key to close
-    const escHandler = (e) => {
-      if (e.key === 'Escape') {
-        closeModal();
-        document.removeEventListener('keydown', escHandler);
-      }
-    };
-    document.addEventListener('keydown', escHandler);
-  }
+        // Remove common navigation/footer patterns
+        const noisyPatterns = [
+            /Cookie (Preferences|Settings|Policy)/gi,
+            /Accept (All )?Cookies/gi,
+            /Privacy (Settings|Preferences)/gi,
+            /Sign In|Log In|Sign Up|Register/gi,
+            /Follow Us On|Connect With Us/gi,
+            /Copyright © \d{4}/gi,
+            /All Rights Reserved/gi,
+            /Back to Top/gi,
+            /Skip to (Main )?Content/gi,
+            /Toggle Navigation/gi,
+            /Search for:/gi,
+            /Language:/gi,
+            /Select (Your )?Country/gi
+        ];
 
-  // Helper: Clean and extract only T&C content
-  function cleanTermsText(rawText) {
-    console.log('[Mind-Link Terms Analyzer] Cleaning text. Original length:', rawText.length);
-    
-    // Remove excessive whitespace
-    let cleaned = rawText.replace(/\s+/g, ' ').trim();
-    
-    // Remove common navigation/footer patterns
-    const noisyPatterns = [
-      /Cookie (Preferences|Settings|Policy)/gi,
-      /Accept (All )?Cookies/gi,
-      /Privacy (Settings|Preferences)/gi,
-      /Sign In|Log In|Sign Up|Register/gi,
-      /Follow Us On|Connect With Us/gi,
-      /Copyright © \d{4}/gi,
-      /All Rights Reserved/gi,
-      /Back to Top/gi,
-      /Skip to (Main )?Content/gi,
-      /Toggle Navigation/gi,
-      /Search for:/gi,
-      /Language:/gi,
-      /Select (Your )?Country/gi
-    ];
-    
-    noisyPatterns.forEach(pattern => {
-      cleaned = cleaned.replace(pattern, '');
-    });
-    
-    // If text is extremely long (>50k chars), extract key sections
-    if (cleaned.length > 50000) {
-      console.log('[Mind-Link Terms Analyzer] Text very large, extracting key sections...');
-      
-      // Look for sections with pricing/payment/subscription keywords
-      const sentences = cleaned.split(/[.!?]+/);
-      const relevantSentences = sentences.filter(sentence => {
-        const lower = sentence.toLowerCase();
-        return lower.includes('price') || lower.includes('payment') || 
-               lower.includes('subscription') || lower.includes('fee') ||
-               lower.includes('renew') || lower.includes('cancel') ||
-               lower.includes('refund') || lower.includes('charge') ||
-               lower.includes('trial') || lower.includes('billing') ||
-               lower.includes('terminate') || lower.includes('agreement');
-      });
-      
-      if (relevantSentences.length > 0) {
-        cleaned = relevantSentences.join('. ') + '.';
-        console.log('[Mind-Link Terms Analyzer] Extracted', relevantSentences.length, 'relevant sentences');
-      } else {
-        // Fallback: Take first 50k characters
-        cleaned = cleaned.substring(0, 50000);
-      }
-    }
-    
-    console.log('[Mind-Link Terms Analyzer] Cleaned text length:', cleaned.length);
-    return cleaned;
-  }
-
-  // Three-stage pipeline: Summarizer → Rewriter → Prompt
-  async function analyzeTerms(termsText, sourceUrl) {
-    console.log('[Mind-Link Terms Analyzer] Starting three-stage analysis...');
-    
-    try {
-      // Clean the text first to remove noise
-      const cleanedText = cleanTermsText(termsText);
-      
-      // Check cache first
-      const cacheKey = sourceUrl || window.location.href;
-      if (termsCache[cacheKey]) {
-        console.log('[Mind-Link Terms Analyzer] Using cached analysis');
-        const cached = termsCache[cacheKey];
-        const banner = createWarningBanner(cached.findings, cached.severity);
-        
-        // Add details button handler
-        document.getElementById('mind-link-terms-details').addEventListener('click', () => {
-          showDetailedAnalysis(cached.summary, cached.simplified, cached.findings, cached.severity);
+        noisyPatterns.forEach(pattern => {
+            cleaned = cleaned.replace(pattern, '');
         });
-        
-        return;
-      }
 
-      // Stage 1: Condense with Summarizer API (5000 words → ~200 words)
-      console.log('[Mind-Link Terms Analyzer] Stage 1: Condensing T&C with Summarizer API...');
-      
-      const summary = await window.__notesio_api.summarizeText(cleanedText, {
-        type: 'tldr',
-        format: 'plain-text',
-        length: 'short'
-      });
-      
-      console.log('[Mind-Link Terms Analyzer] Stage 1 complete. Summary length:', summary.length);
+        // If text is extremely long (>50k chars), extract key sections
+        if (cleaned.length > 50000) {
+            console.log('[Mind-Link Terms Analyzer] Text very large, extracting key sections...');
 
-      // Stage 2: Simplify with Rewriter API
-      console.log('[Mind-Link Terms Analyzer] Stage 2: Simplifying with Rewriter API...');
-      
-      const simplified = await window.__notesio_api.rewriteText(summary, {
-        tone: 'more-casual',
-        format: 'plain-text',
-        length: 'as-is',
-        sharedContext: 'Terms and conditions for a subscription service',
-        context: 'Rewrite in simple language that elderly users can understand. Focus on costs and commitments.'
-      });
-      
-      console.log('[Mind-Link Terms Analyzer] Stage 2 complete. Simplified length:', simplified.length);
+            // Look for sections with pricing/payment/subscription keywords
+            const sentences = cleaned.split(/[.!?]+/);
+            const relevantSentences = sentences.filter(sentence => {
+                const lower = sentence.toLowerCase();
+                return lower.includes('price') || lower.includes('payment') ||
+                    lower.includes('subscription') || lower.includes('fee') ||
+                    lower.includes('renew') || lower.includes('cancel') ||
+                    lower.includes('refund') || lower.includes('charge') ||
+                    lower.includes('trial') || lower.includes('billing') ||
+                    lower.includes('terminate') || lower.includes('agreement');
+            });
 
-      // Stage 3: Detect hidden fees with Prompt API
-      console.log('[Mind-Link Terms Analyzer] Stage 3: Detecting hidden fees with Prompt API...');
-      
-      const prompt = `You are analyzing terms of service to protect users from hidden fees and subscription traps.
+            if (relevantSentences.length > 0) {
+                cleaned = relevantSentences.join('. ') + '.';
+                console.log('[Mind-Link Terms Analyzer] Extracted', relevantSentences.length, 'relevant sentences');
+            } else {
+                // Fallback: Take first 50k characters
+                cleaned = cleaned.substring(0, 50000);
+            }
+        }
+
+        console.log('[Mind-Link Terms Analyzer] Cleaned text length:', cleaned.length);
+        return cleaned;
+    }
+
+    // Three-stage pipeline: Summarizer → Rewriter → Prompt
+    async function analyzeTerms(termsText, sourceUrl) {
+        console.log('[Mind-Link Terms Analyzer] Starting three-stage analysis...');
+
+        try {
+            // Clean the text first to remove noise
+            const cleanedText = cleanTermsText(termsText);
+
+            // Check cache first
+            const cacheKey = sourceUrl || window.location.href;
+            if (termsCache[cacheKey]) {
+                console.log('[Mind-Link Terms Analyzer] Using cached analysis');
+                const cached = termsCache[cacheKey];
+                const banner = createWarningBanner(cached.findings, cached.severity);
+
+                // Add details button handler
+                document.getElementById('mind-link-terms-details').addEventListener('click', () => {
+                    showDetailedAnalysis(cached.summary, cached.simplified, cached.findings, cached.severity);
+                });
+
+                return;
+            }
+
+            // Stage 1: Condense with Summarizer API (5000 words → ~200 words)
+            console.log('[Mind-Link Terms Analyzer] Stage 1: Condensing T&C with Summarizer API...');
+
+            const summary = await window.__notesio_api.summarizeText(cleanedText, {
+                type: 'tldr',
+                format: 'plain-text',
+                length: 'short'
+            });
+
+            console.log('[Mind-Link Terms Analyzer] Stage 1 complete. Summary length:', summary.length);
+
+            // Stage 2: Simplify with Rewriter API
+            console.log('[Mind-Link Terms Analyzer] Stage 2: Simplifying with Rewriter API...');
+
+            const simplified = await window.__notesio_api.rewriteText(summary, {
+                tone: 'more-casual',
+                format: 'plain-text',
+                length: 'as-is',
+                sharedContext: 'Terms and conditions for a subscription service',
+                context: 'Rewrite in simple language that elderly users can understand. Focus on costs and commitments.'
+            });
+
+            console.log('[Mind-Link Terms Analyzer] Stage 2 complete. Simplified length:', simplified.length);
+
+            // Stage 3: Detect hidden fees with Prompt API
+            console.log('[Mind-Link Terms Analyzer] Stage 3: Detecting hidden fees with Prompt API...');
+
+            const prompt = `You are analyzing terms of service to protect users from hidden fees and subscription traps.
 
 TEXT TO ANALYZE:
 "${simplified}"
@@ -546,280 +546,280 @@ EXAMPLES:
 
 Now analyze the text above and extract findings:`;
 
-      const analysisResult = await window.__notesio_api.callChromeAI(prompt);
-      
-      console.log('[Mind-Link Terms Analyzer] Stage 3 complete. Raw result:', analysisResult);
+            const analysisResult = await window.__notesio_api.callChromeAI(prompt);
 
-      // Parse JSON response
-      let analysis;
-      try {
-        // Remove markdown code blocks if present
-        let cleanResult = analysisResult.trim();
-        if (cleanResult.startsWith('```')) {
-          cleanResult = cleanResult.replace(/```json\s*|\s*```/g, '').trim();
-        }
-        
-        analysis = JSON.parse(cleanResult);
-      } catch (parseError) {
-        console.error('[Mind-Link Terms Analyzer] JSON parse error:', parseError);
-        // Fallback: manual parsing
-        analysis = {
-          hasHiddenFees: analysisResult.toLowerCase().includes('true'),
-          severity: 3,
-          findings: ['Unable to fully parse analysis. Please review terms carefully.']
-        };
-      }
+            console.log('[Mind-Link Terms Analyzer] Stage 3 complete. Raw result:', analysisResult);
 
-      // POST-PROCESSING: Clean up and improve findings quality
-      console.log('[Mind-Link Terms Analyzer] Post-processing findings...');
-      
-      if (analysis.findings && analysis.findings.length > 0) {
-        analysis.findings = analysis.findings.map(finding => {
-          let cleaned = finding.trim();
-          
-          // Fix incomplete dollar amounts (e.g., "$99" → "$99.99/month")
-          if (cleaned.includes('$') && !cleaned.includes('/month') && !cleaned.includes('/year')) {
-            // Try to extract full amount from summary
-            const monthlyMatch = simplified.match(/\$\d+\.?\d*\s*(?:per\s+month|\/month|monthly)/i);
-            const yearlyMatch = simplified.match(/\$\d+\.?\d*\s*(?:per\s+year|\/year|yearly|annually)/i);
-            
-            if (monthlyMatch) {
-              const amount = monthlyMatch[0].match(/\$[\d.]+/)[0];
-              cleaned = cleaned.replace(/\$\d+/, amount + '/month');
-            } else if (yearlyMatch) {
-              const amount = yearlyMatch[0].match(/\$[\d.]+/)[0];
-              cleaned = cleaned.replace(/\$\d+/, amount + '/year');
-            }
-          }
-          
-          // Remove redundant category prefixes
-          cleaned = cleaned.replace(/^(Auto-?renewal clause|Hidden fee|Non-refundable charges?|Automatic credit card charges?|Early termination fees?|Difficult cancellation|Price increases?):\s*/i, '');
-          
-          // Shorten overly verbose findings
-          if (cleaned.toLowerCase().includes('subscription automatically renews')) {
-            // Extract key info: price and timing
-            const priceMatch = cleaned.match(/\$[\d.]+(?:\/month|\/year)?/);
-            const daysMatch = cleaned.match(/\d+\s+(?:days?|business days?)/i);
-            
-            if (priceMatch && daysMatch) {
-              cleaned = `Auto-renews at ${priceMatch[0]} after trial`;
-            } else if (priceMatch) {
-              cleaned = `Auto-renews at ${priceMatch[0]}`;
-            } else {
-              cleaned = 'Auto-renewal after trial period';
-            }
-          }
-          
-          // Clean up common verbose patterns
-          if (cleaned.toLowerCase().includes('explicitly states no refunds')) {
-            cleaned = 'Non-refundable after activation';
-          }
-          
-          if (cleaned.toLowerCase().includes('implied due to auto-renewal')) {
-            cleaned = 'Charges continue until canceled';
-          }
-          
-          // Enforce 60 character limit
-          if (cleaned.length > 60) {
-            cleaned = cleaned.substring(0, 57) + '...';
-          }
-          
-          return cleaned;
-        });
-      }
-
-      // Smart fallback for generic/unhelpful findings
-      const hasGenericFindings = analysis.findings.some(f => 
-        f.toLowerCase().includes('subscription-based') ||
-        f.toLowerCase().includes('may vary') ||
-        f.toLowerCase().includes('product-specific') ||
-        f.toLowerCase().includes('ongoing recurring fees') ||
-        f.toLowerCase().includes('rules may') ||
-        f.toLowerCase().includes('company email accounts')
-      );
-      
-      const hasNoSpecificInfo = analysis.findings.every(f => 
-        f.length < 20 || // Too short to be useful
-        !f.includes('$') && !f.toLowerCase().includes('cancel') && !f.toLowerCase().includes('refund') // No actionable info
-      );
-
-      if (hasGenericFindings || hasNoSpecificInfo || analysis.findings.length === 0) {
-        console.log('[Mind-Link Terms Analyzer] Generic findings detected. Applying smart fallback.');
-        analysis.findings = [
-          'No specific dollar amounts found',
-          'Review full terms for pricing details',
-          'Check for auto-renewal policies',
-          'Verify cancellation requirements'
-        ];
-        analysis.severity = Math.max(2, analysis.severity); // At least moderate caution
-      }
-
-      console.log('[Mind-Link Terms Analyzer] Final processed findings:', analysis.findings);
-
-      // Cache results
-      termsCache[cacheKey] = {
-        timestamp: Date.now(),
-        summary,
-        simplified,
-        findings: analysis.findings || [],
-        severity: analysis.severity || 3,
-        hasHiddenFees: analysis.hasHiddenFees
-      };
-      saveCache();
-
-      // Show results
-      if (analysis.hasHiddenFees && analysis.findings && analysis.findings.length > 0) {
-        const banner = createWarningBanner(analysis.findings, analysis.severity);
-        
-        // Add details button handler
-        document.getElementById('mind-link-terms-details').addEventListener('click', () => {
-          showDetailedAnalysis(summary, simplified, analysis.findings, analysis.severity);
-        });
-      } else {
-        console.log('[Mind-Link Terms Analyzer] No hidden fees detected');
-      }
-
-    } catch (error) {
-      console.error('[Mind-Link Terms Analyzer] Pipeline error:', error);
-      
-      // Show error to user
-      const banner = createWarningBanner([
-        'Unable to analyze terms automatically',
-        'Error: ' + error.message,
-        'Please review terms carefully before agreeing'
-      ], 3);
-    }
-  }
-
-  // Detect and extract Terms & Conditions
-  function detectTermsAndConditions() {
-    console.log('[Mind-Link Terms Analyzer] Scanning for T&C...');
-
-    // Look for links containing terms-related keywords
-    const termsKeywords = [
-      'terms',
-      'conditions',
-      'agreement',
-      'legal',
-      'privacy',
-      'subscription',
-      'billing'
-    ];
-
-    const links = Array.from(document.querySelectorAll('a'));
-    const termsLinks = links.filter(link => {
-      const text = link.textContent.toLowerCase();
-      const href = link.href.toLowerCase();
-      return termsKeywords.some(keyword => text.includes(keyword) || href.includes(keyword));
-    });
-
-    console.log('[Mind-Link Terms Analyzer] Found', termsLinks.length, 'potential T&C links');
-
-    // Add click listeners to T&C links
-    termsLinks.forEach(link => {
-      if (analyzedTerms.has(link.href)) {
-        return; // Already analyzed
-      }
-
-      link.addEventListener('click', async (e) => {
-        console.log('[Mind-Link Terms Analyzer] T&C link clicked:', link.href);
-        
-        // Mark as analyzed
-        analyzedTerms.add(link.href);
-
-        // Wait for page load or modal/popup
-        setTimeout(async () => {
-          // Try to find T&C content
-          let termsContent = '';
-
-          // Check for modal/popup
-          const modals = document.querySelectorAll('[role="dialog"], .modal, .popup, [class*="terms"]');
-          if (modals.length > 0) {
-            const modal = modals[modals.length - 1];
-            termsContent = modal.textContent;
-          }
-
-          // Check for iframe
-          const iframes = document.querySelectorAll('iframe');
-          for (const iframe of iframes) {
+            // Parse JSON response
+            let analysis;
             try {
-              if (iframe.contentDocument) {
-                termsContent = iframe.contentDocument.body.textContent;
-                break;
-              }
-            } catch (err) {
-              // Cross-origin iframe, skip
+                // Remove markdown code blocks if present
+                let cleanResult = analysisResult.trim();
+                if (cleanResult.startsWith('```')) {
+                    cleanResult = cleanResult.replace(/```json\s*|\s*```/g, '').trim();
+                }
+
+                analysis = JSON.parse(cleanResult);
+            } catch (parseError) {
+                console.error('[Mind-Link Terms Analyzer] JSON parse error:', parseError);
+                // Fallback: manual parsing
+                analysis = {
+                    hasHiddenFees: analysisResult.toLowerCase().includes('true'),
+                    severity: 3,
+                    findings: ['Unable to fully parse analysis. Please review terms carefully.']
+                };
             }
-          }
 
-          // Check for expanded content on same page
-          if (!termsContent) {
-            const contentAreas = document.querySelectorAll('[class*="terms"], [id*="terms"], [class*="agreement"], [id*="agreement"]');
-            if (contentAreas.length > 0) {
-              termsContent = Array.from(contentAreas).map(el => el.textContent).join('\n');
+            // POST-PROCESSING: Clean up and improve findings quality
+            console.log('[Mind-Link Terms Analyzer] Post-processing findings...');
+
+            if (analysis.findings && analysis.findings.length > 0) {
+                analysis.findings = analysis.findings.map(finding => {
+                    let cleaned = finding.trim();
+
+                    // Fix incomplete dollar amounts (e.g., "$99" → "$99.99/month")
+                    if (cleaned.includes('$') && !cleaned.includes('/month') && !cleaned.includes('/year')) {
+                        // Try to extract full amount from summary
+                        const monthlyMatch = simplified.match(/\$\d+\.?\d*\s*(?:per\s+month|\/month|monthly)/i);
+                        const yearlyMatch = simplified.match(/\$\d+\.?\d*\s*(?:per\s+year|\/year|yearly|annually)/i);
+
+                        if (monthlyMatch) {
+                            const amount = monthlyMatch[0].match(/\$[\d.]+/)[0];
+                            cleaned = cleaned.replace(/\$\d+/, amount + '/month');
+                        } else if (yearlyMatch) {
+                            const amount = yearlyMatch[0].match(/\$[\d.]+/)[0];
+                            cleaned = cleaned.replace(/\$\d+/, amount + '/year');
+                        }
+                    }
+
+                    // Remove redundant category prefixes
+                    cleaned = cleaned.replace(/^(Auto-?renewal clause|Hidden fee|Non-refundable charges?|Automatic credit card charges?|Early termination fees?|Difficult cancellation|Price increases?):\s*/i, '');
+
+                    // Shorten overly verbose findings
+                    if (cleaned.toLowerCase().includes('subscription automatically renews')) {
+                        // Extract key info: price and timing
+                        const priceMatch = cleaned.match(/\$[\d.]+(?:\/month|\/year)?/);
+                        const daysMatch = cleaned.match(/\d+\s+(?:days?|business days?)/i);
+
+                        if (priceMatch && daysMatch) {
+                            cleaned = `Auto-renews at ${priceMatch[0]} after trial`;
+                        } else if (priceMatch) {
+                            cleaned = `Auto-renews at ${priceMatch[0]}`;
+                        } else {
+                            cleaned = 'Auto-renewal after trial period';
+                        }
+                    }
+
+                    // Clean up common verbose patterns
+                    if (cleaned.toLowerCase().includes('explicitly states no refunds')) {
+                        cleaned = 'Non-refundable after activation';
+                    }
+
+                    if (cleaned.toLowerCase().includes('implied due to auto-renewal')) {
+                        cleaned = 'Charges continue until canceled';
+                    }
+
+                    // Enforce 60 character limit
+                    if (cleaned.length > 60) {
+                        cleaned = cleaned.substring(0, 57) + '...';
+                    }
+
+                    return cleaned;
+                });
             }
-          }
 
-          // Only analyze if we have substantial content (> 500 words)
-          if (termsContent && termsContent.split(/\s+/).length > 500) {
-            console.log('[Mind-Link Terms Analyzer] Found T&C content, starting analysis...');
-            await analyzeTerms(termsContent, link.href);
-          }
-        }, 1500); // Wait for content to load
-      });
-    });
+            // Smart fallback for generic/unhelpful findings
+            const hasGenericFindings = analysis.findings.some(f =>
+                f.toLowerCase().includes('subscription-based') ||
+                f.toLowerCase().includes('may vary') ||
+                f.toLowerCase().includes('product-specific') ||
+                f.toLowerCase().includes('ongoing recurring fees') ||
+                f.toLowerCase().includes('rules may') ||
+                f.toLowerCase().includes('company email accounts')
+            );
 
-    // Also check if current page IS a terms page
-    const pageTitle = document.title.toLowerCase();
-    const pageContent = document.body.textContent;
-    
-    if (termsKeywords.some(keyword => pageTitle.includes(keyword)) && 
-        pageContent.split(/\s+/).length > 1000) {
-      
-      console.log('[Mind-Link Terms Analyzer] Current page appears to be T&C, analyzing...');
-      
-      // Extract main content
-      const mainContent = document.querySelector('main, article, [role="main"], .content, #content') || document.body;
-      const termsText = mainContent.textContent;
-      
-      if (!analyzedTerms.has(window.location.href)) {
-        analyzedTerms.add(window.location.href);
-        setTimeout(() => analyzeTerms(termsText, window.location.href), 1000);
-      }
+            const hasNoSpecificInfo = analysis.findings.every(f =>
+                f.length < 20 || // Too short to be useful
+                !f.includes('$') && !f.toLowerCase().includes('cancel') && !f.toLowerCase().includes('refund') // No actionable info
+            );
+
+            if (hasGenericFindings || hasNoSpecificInfo || analysis.findings.length === 0) {
+                console.log('[Mind-Link Terms Analyzer] Generic findings detected. Applying smart fallback.');
+                analysis.findings = [
+                    'No specific dollar amounts found',
+                    'Review full terms for pricing details',
+                    'Check for auto-renewal policies',
+                    'Verify cancellation requirements'
+                ];
+                analysis.severity = Math.max(2, analysis.severity); // At least moderate caution
+            }
+
+            console.log('[Mind-Link Terms Analyzer] Final processed findings:', analysis.findings);
+
+            // Cache results
+            termsCache[cacheKey] = {
+                timestamp: Date.now(),
+                summary,
+                simplified,
+                findings: analysis.findings || [],
+                severity: analysis.severity || 3,
+                hasHiddenFees: analysis.hasHiddenFees
+            };
+            saveCache();
+
+            // Show results
+            if (analysis.hasHiddenFees && analysis.findings && analysis.findings.length > 0) {
+                const banner = createWarningBanner(analysis.findings, analysis.severity);
+
+                // Add details button handler
+                document.getElementById('mind-link-terms-details').addEventListener('click', () => {
+                    showDetailedAnalysis(summary, simplified, analysis.findings, analysis.severity);
+                });
+            } else {
+                console.log('[Mind-Link Terms Analyzer] No hidden fees detected');
+            }
+
+        } catch (error) {
+            console.error('[Mind-Link Terms Analyzer] Pipeline error:', error);
+
+            // Show error to user
+            const banner = createWarningBanner([
+                'Unable to analyze terms automatically',
+                'Error: ' + error.message,
+                'Please review terms carefully before agreeing'
+            ], 3);
+        }
     }
-  }
 
-  // Initialize when page loads
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', detectTermsAndConditions);
-  } else {
-    detectTermsAndConditions();
-  }
+    // Detect and extract Terms & Conditions
+    function detectTermsAndConditions() {
+        console.log('[Mind-Link Terms Analyzer] Scanning for T&C...');
 
-  // Re-scan when DOM changes (for SPAs)
-  let scanTimeout;
-  const observer = new MutationObserver(() => {
-    clearTimeout(scanTimeout);
-    scanTimeout = setTimeout(detectTermsAndConditions, 2000);
-  });
+        // Look for links containing terms-related keywords
+        const termsKeywords = [
+            'terms',
+            'conditions',
+            'agreement',
+            'legal',
+            'privacy',
+            'subscription',
+            'billing'
+        ];
 
-  // Only observe if body exists
-  if (document.body) {
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  } else {
-    // Wait for body to be available
-    window.addEventListener('DOMContentLoaded', () => {
-      if (document.body) {
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true
+        const links = Array.from(document.querySelectorAll('a'));
+        const termsLinks = links.filter(link => {
+            const text = link.textContent.toLowerCase();
+            const href = link.href.toLowerCase();
+            return termsKeywords.some(keyword => text.includes(keyword) || href.includes(keyword));
         });
-      }
-    });
-  }
 
-  console.log('[Mind-Link Terms Analyzer] Initialized successfully');
+        console.log('[Mind-Link Terms Analyzer] Found', termsLinks.length, 'potential T&C links');
+
+        // Add click listeners to T&C links
+        termsLinks.forEach(link => {
+            if (analyzedTerms.has(link.href)) {
+                return; // Already analyzed
+            }
+
+            link.addEventListener('click', async (e) => {
+                console.log('[Mind-Link Terms Analyzer] T&C link clicked:', link.href);
+
+                // Mark as analyzed
+                analyzedTerms.add(link.href);
+
+                // Wait for page load or modal/popup
+                setTimeout(async () => {
+                    // Try to find T&C content
+                    let termsContent = '';
+
+                    // Check for modal/popup
+                    const modals = document.querySelectorAll('[role="dialog"], .modal, .popup, [class*="terms"]');
+                    if (modals.length > 0) {
+                        const modal = modals[modals.length - 1];
+                        termsContent = modal.textContent;
+                    }
+
+                    // Check for iframe
+                    const iframes = document.querySelectorAll('iframe');
+                    for (const iframe of iframes) {
+                        try {
+                            if (iframe.contentDocument) {
+                                termsContent = iframe.contentDocument.body.textContent;
+                                break;
+                            }
+                        } catch (err) {
+                            // Cross-origin iframe, skip
+                        }
+                    }
+
+                    // Check for expanded content on same page
+                    if (!termsContent) {
+                        const contentAreas = document.querySelectorAll('[class*="terms"], [id*="terms"], [class*="agreement"], [id*="agreement"]');
+                        if (contentAreas.length > 0) {
+                            termsContent = Array.from(contentAreas).map(el => el.textContent).join('\n');
+                        }
+                    }
+
+                    // Only analyze if we have substantial content (> 500 words)
+                    if (termsContent && termsContent.split(/\s+/).length > 500) {
+                        console.log('[Mind-Link Terms Analyzer] Found T&C content, starting analysis...');
+                        await analyzeTerms(termsContent, link.href);
+                    }
+                }, 1500); // Wait for content to load
+            });
+        });
+
+        // Also check if current page IS a terms page
+        const pageTitle = document.title.toLowerCase();
+        const pageContent = document.body.textContent;
+
+        if (termsKeywords.some(keyword => pageTitle.includes(keyword)) &&
+            pageContent.split(/\s+/).length > 1000) {
+
+            console.log('[Mind-Link Terms Analyzer] Current page appears to be T&C, analyzing...');
+
+            // Extract main content
+            const mainContent = document.querySelector('main, article, [role="main"], .content, #content') || document.body;
+            const termsText = mainContent.textContent;
+
+            if (!analyzedTerms.has(window.location.href)) {
+                analyzedTerms.add(window.location.href);
+                setTimeout(() => analyzeTerms(termsText, window.location.href), 1000);
+            }
+        }
+    }
+
+    // Initialize when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', detectTermsAndConditions);
+    } else {
+        detectTermsAndConditions();
+    }
+
+    // Re-scan when DOM changes (for SPAs)
+    let scanTimeout;
+    const observer = new MutationObserver(() => {
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(detectTermsAndConditions, 2000);
+    });
+
+    // Only observe if body exists
+    if (document.body) {
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    } else {
+        // Wait for body to be available
+        window.addEventListener('DOMContentLoaded', () => {
+            if (document.body) {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        });
+    }
+
+    console.log('[Mind-Link Terms Analyzer] Initialized successfully');
 })();

@@ -139,7 +139,7 @@
       // Estimate token count (rough: 1 token ≈ 4 characters)
       const estimatedTokens = text.length / 4;
       const MAX_TOKENS = 3500; // Safe limit to avoid QuotaExceededError
-      
+
       // If text is too large, chunk it
       if (estimatedTokens > MAX_TOKENS) {
         console.log(`[Mind-Link] Text too large (${estimatedTokens} tokens). Chunking...`);
@@ -164,7 +164,7 @@
         : error.message || String(error);
 
       console.error("[Mind-Link] Summarizer error:", errorMessage, error);
-      
+
       // If quota exceeded, try chunking
       if (error.name === 'QuotaExceededError') {
         console.log("[Mind-Link] Quota exceeded. Trying chunk-based summarization...");
@@ -174,7 +174,7 @@
           console.error("[Mind-Link] Chunking also failed:", chunkError);
         }
       }
-      
+
       // Fallback to Prompt API
       console.log("[Mind-Link] Falling back to Prompt API for summarization...");
       const prompt = `Summarize the following text concisely in 200 words or less:\n\n${text.slice(0, 15000)}`;
@@ -186,11 +186,11 @@
   async function summarizeInChunks(text, options = {}) {
     const MAX_CHUNK_SIZE = 14000; // ~3500 tokens
     const chunks = [];
-    
+
     // Split text into chunks by paragraphs to maintain context
     const paragraphs = text.split(/\n\n+/);
     let currentChunk = '';
-    
+
     for (const para of paragraphs) {
       if ((currentChunk + para).length > MAX_CHUNK_SIZE) {
         if (currentChunk) chunks.push(currentChunk);
@@ -200,16 +200,16 @@
       }
     }
     if (currentChunk) chunks.push(currentChunk);
-    
+
     console.log(`[Mind-Link] Split into ${chunks.length} chunks`);
-    
+
     // Summarize each chunk
     const summarizer = await Summarizer.create({
       type: options.type || "tldr",
       format: options.format || "markdown",
       length: "short" // Use short length for chunks
     });
-    
+
     const chunkSummaries = [];
     for (let i = 0; i < chunks.length; i++) {
       console.log(`[Mind-Link] Summarizing chunk ${i + 1}/${chunks.length}...`);
@@ -222,10 +222,10 @@
         chunkSummaries.push(chunks[i].slice(0, 500) + '...');
       }
     }
-    
+
     // Combine summaries
     const combined = chunkSummaries.join('\n\n');
-    
+
     // If combined is still too long, summarize the summaries
     if (combined.length > MAX_CHUNK_SIZE) {
       console.log('[Mind-Link] Combined summaries too long. Final condensation...');
@@ -233,7 +233,7 @@
       summarizer.destroy();
       return final.trim();
     }
-    
+
     summarizer.destroy();
     return combined.trim();
   }
@@ -272,7 +272,7 @@
       const result = await rewriter.rewrite(text, {
         context: options.context || ""
       });
-      
+
       rewriter.destroy();
 
       console.log("[Mind-Link] Received rewriter response");

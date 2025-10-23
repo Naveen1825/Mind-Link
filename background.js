@@ -194,7 +194,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         // Get tab info and validate state
         const tab = await chrome.tabs.get(sender.tab.id);
-        
+
         // Check if tab is fully loaded
         if (tab.status !== 'complete') {
           console.warn('[Background] Tab not fully loaded, status:', tab.status);
@@ -210,18 +210,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
 
-        // Ensure tab is visible in the current window
+        // Note: chrome.tabs.captureVisibleTab captures the ACTIVE tab in the window
+        // With host_permissions: ["<all_urls>"], we can capture without user interaction
+        // But the tab MUST be visible (active) in its window
         if (!tab.active) {
-          console.warn('[Background] Tab is not active - may not have activeTab permission');
-          // Try to make it active first (requires user interaction)
-          try {
-            await chrome.tabs.update(tab.id, { active: true });
-            await new Promise(resolve => setTimeout(resolve, 300)); // Wait for activation
-          } catch (e) {
-            console.warn('[Background] Could not activate tab:', e.message);
-            sendResponse({ success: false, error: 'Tab activation required for screenshot' });
-            return;
-          }
+          console.warn('[Background] Tab is not active - cannot capture visible tab');
+          console.warn('[Background] Screenshots require the tab to be visible/active');
+          sendResponse({ success: false, error: 'Tab must be visible for screenshot capture' });
+          return;
         }
 
         // Add a small delay to ensure page is stable

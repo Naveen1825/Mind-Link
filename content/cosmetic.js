@@ -35,56 +35,63 @@
 
   function ensureCosmeticStyles() {
     if (document.getElementById(STYLE_ID)) return;
+
+    const hostname = getHostname();
+
+    // Whitelist: Skip cosmetic blocking entirely for trusted domains
+    const trustedDomains = [
+      'mail.google.com',
+      'gmail.com',
+      'docs.google.com',
+      'drive.google.com',
+      'calendar.google.com',
+      'meet.google.com',
+      'outlook.office.com',
+      'outlook.live.com',
+      'office.com',
+      'login.microsoftonline.com',
+      'accounts.google.com',
+      'myaccount.google.com',
+      'app.slack.com',
+      'web.whatsapp.com',
+      'teams.microsoft.com'
+    ];
+
+    if (trustedDomains.some(domain => hostname.includes(domain))) {
+      console.log('[Mind-Link] Skipping cosmetic blocking for trusted domain:', hostname);
+      return;
+    }
+
     const style = document.createElement('style');
     style.id = STYLE_ID;
-    // Bulletproof selectors - catches ALL common ad patterns
+
+    // More conservative selectors - only block OBVIOUS ads
     const selectors = [
-      // Generic ad classes
-      '.ad', '.ads', '.adsbox', '.ad-container', '.ad-slot', '.ad-banner',
-      '.ad-wrapper', '.ad-frame', '.ad-content', '.ad-block', '.ad-space',
-      '.advertisement', '.advertising', '.advert', '.adverts',
-      '.sponsored', '.sponsor', '.sponsorship', '.sponsor-content',
-      '.adsbygoogle', '.google-ad', '.google-ads',
+      // Very specific ad classes (exact match)
+      '.advertisement', '.advertising', '.adsbygoogle', '.google-ads',
 
-      // Specific ad networks
+      // Specific ad networks (exact match)
       '.doubleclick', '.taboola', '.outbrain', '.mgid', '.revcontent',
-      '.zergnet', '.adblade', '.content-ad', '.native-ad',
+      '.zergnet', '.adblade',
 
-      // Social tracking/ads
-      '.fb-ad', '.twitter-ad', '.instagram-ad', '.tiktok-ad',
+      // Video ads (exact match)
+      '.video-ad', '.preroll-ad', '.midroll-ad', '.player-ad',
 
-      // Video ads
-      '.video-ad', '.preroll-ad', '.midroll-ad', '.overlay-ad',
-      '.player-ad', '.ad-overlay',
+      // Data attributes (very specific)
+      '[data-ad-slot]', '[data-google-query-id]', '[data-ad-client]',
+      '[aria-label="advertisement"]',
 
-      // Banner patterns
-      '.banner', '.top-banner', '.bottom-banner', '.side-banner',
-      '.header-ad', '.footer-ad', '.sidebar-ad',
+      // ID patterns (very specific - starts with ad_ or ads_)
+      '[id^="ad_"]', '[id^="ads_"]', '[id^="google_ads"]',
 
-      // Mobile patterns
-      '.mobile-ad', '.app-ad', '.interstitial',
-
-      // Data attributes
-      '[data-ad]', '[data-ads]', '[data-advertising]', '[data-ad-slot]',
-      '[data-google-query-id]', '[data-ad-client]',
-      '[aria-label="advertisement"]', '[aria-label="sponsored"]',
-
-      // ID patterns (more aggressive)
-      '[id^="ad_"]', '[id^="ads_"]', '[id^="ad-"]', '[id^="ads-"]',
-      '[id*="-ad-"]', '[id*="_ad_"]', '[id*="google_ads"]',
-      '[id*="sponsor"]', '[id*="banner"]',
-
-      // Class patterns (more aggressive)
-      '[class^="ad_"]', '[class^="ads_"]', '[class^="ad-"]', '[class^="ads-"]',
-      '[class*="-ad-"]', '[class*="_ad_"]', '[class*="-ads-"]', '[class*="_ads_"]',
-      '[class*="sponsor"]', '[class*="banner"]', '[class*="promo"]',
-      '[class*="advertising"]', '[class*="advert"]',
+      // Class patterns (very specific - starts with ad_ or ads_)
+      '[class^="ad_"]', '[class^="ads_"]',
 
       // Tracking pixels
-      'img[width="1"][height="1"]', 'img[style*="width: 1px"]',
+      'img[width="1"][height="1"]',
       'iframe[width="1"][height="1"]',
 
-      // Known ad sizes (IAB standard sizes)
+      // Known ad sizes (IAB standard sizes for iframes only)
       'iframe[width="300"][height="250"]', // Medium Rectangle
       'iframe[width="728"][height="90"]',  // Leaderboard
       'iframe[width="160"][height="600"]', // Wide Skyscraper
@@ -92,11 +99,8 @@
       'iframe[width="970"][height="250"]', // Billboard
       'iframe[width="320"][height="50"]',  // Mobile Banner
 
-      // Additional suspicious patterns
-      '[class*="monetization"]', '[class*="native-ad"]',
-      '[class*="promoted"]', '[class*="paid-content"]',
-      'a[href*="doubleclick.net"]', 'a[href*="googlesyndication.com"]',
-      'a[href*="/ad?"]', 'a[href*="/ads?"]'
+      // Known ad domains in links
+      'a[href*="doubleclick.net"]', 'a[href*="googlesyndication.com"]'
     ];
 
     style.textContent = `${selectors.join(',\n')} { display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; width: 0 !important; position: absolute !important; left: -9999px !important; }`;
@@ -123,16 +127,29 @@
     ensureCosmeticStyles();
   }
 
-  // Observe for dynamically added ads (bulletproof detection)
+  // Observe for dynamically added ads (conservative detection)
   if (typeof MutationObserver !== 'undefined') {
+    const hostname = getHostname();
+
+    // Skip mutation observer for trusted domains
+    const trustedDomains = [
+      'mail.google.com', 'gmail.com', 'docs.google.com', 'drive.google.com',
+      'calendar.google.com', 'meet.google.com', 'outlook.office.com',
+      'outlook.live.com', 'office.com', 'accounts.google.com'
+    ];
+
+    if (trustedDomains.some(domain => hostname.includes(domain))) {
+      console.log('[Mind-Link] Skipping mutation observer for trusted domain');
+      return;
+    }
+
     const observer = new MutationObserver(() => {
-      // Comprehensive selector list for dynamic ads
+      // Conservative selector list for dynamic ads (only obvious ads)
       const dynamicAdSelectors = [
-        '.ad', '.ads', '.advertisement', '.sponsored', '.adsbygoogle',
-        '.banner', '.promo', '.native-ad', '.content-ad', '.video-ad',
-        '[data-ad]', '[data-ads]', '[id*="ad-"]', '[class*="ad-"]',
-        '[class*="sponsor"]', '[class*="banner"]', 'iframe[width="300"][height="250"]',
-        'iframe[width="728"][height="90"]', '.taboola', '.outbrain'
+        '.advertisement', '.adsbygoogle', '.google-ads',
+        '.taboola', '.outbrain', '[data-ad-slot]',
+        '[id^="google_ads"]', 'iframe[width="300"][height="250"]',
+        'iframe[width="728"][height="90"]'
       ];
 
       const adElements = document.querySelectorAll(dynamicAdSelectors.join(','));
@@ -143,7 +160,7 @@
           if (isMediaElement) {
             return false;
           }
-          
+
           const isHidden = window.getComputedStyle(el).display === 'none';
           const notCounted = !el.dataset.mindlinkCounted;
           if (isHidden && notCounted) {
@@ -162,13 +179,13 @@
         incrementAdsBlocked(newAds.length);
       }
 
-      // Also remove any iframes that load ad scripts
+      // Only block iframes with obvious ad sources
       document.querySelectorAll('iframe').forEach(iframe => {
         try {
           const src = iframe.src || '';
           const adPatterns = [
-            'doubleclick', 'googlesyndication', 'adservice', 'ads.', '/ads/',
-            'googleadservices', 'adnxs', 'taboola', 'outbrain', 'amazon-adsystem'
+            'doubleclick', 'googlesyndication', 'googleadservices',
+            'adnxs', 'taboola.com', 'outbrain.com', 'amazon-adsystem'
           ];
 
           if (adPatterns.some(pattern => src.includes(pattern)) && !iframe.dataset.mindlinkBlocked) {
@@ -190,7 +207,7 @@
     });
   }
 
-  // Block script tags that inject ads
+  // Block script tags that inject ads (conservative list)
   if (typeof MutationObserver !== 'undefined') {
     const scriptObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -198,8 +215,8 @@
           if (node.tagName === 'SCRIPT') {
             const src = node.src || '';
             const adScripts = [
-              'doubleclick', 'googlesyndication', 'adsbygoogle', 'googleadservices',
-              'adservice', '/ads.js', '/ad.js', 'taboola', 'outbrain'
+              'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
+              'taboola.com', 'outbrain.com', 'amazon-adsystem.com'
             ];
 
             if (adScripts.some(pattern => src.includes(pattern))) {

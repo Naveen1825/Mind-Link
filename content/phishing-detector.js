@@ -5,13 +5,18 @@
   let phishingCheckInProgress = false;
   let warningOverlay = null;
 
+  // Rate limiting state
+  let lastCheckTime = 0;
+  let lastCheckedHostname = '';
+  const MIN_CHECK_INTERVAL = 5000; // 5 seconds between checks for same domain
+
   function collectPageData() {
     try {
-      // Collect visible button text and form labels
+      // Collect visible button text and form labels (LIMIT TO 5 for efficiency)
       const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], input[type="button"], a.btn, a.button'))
         .map(el => el.textContent?.trim() || el.value?.trim() || '')
         .filter(text => text.length > 0 && text.length < 50)
-        .slice(0, 10);
+        .slice(0, 5); // Reduced from 10 to 5
 
       // Check for common brand names in page text
       const pageText = document.body.innerText.toLowerCase();
@@ -31,8 +36,8 @@
         suspiciousLinks: Array.from(document.querySelectorAll('a[href]'))
           .map(a => a.href)
           .filter(href => href && !href.startsWith(location.origin))
-          .slice(0, 10),
-        metaDescription: document.querySelector('meta[name="description"]')?.content || '',
+          .slice(0, 3), // Reduced from 10 to 3
+        metaDescription: (document.querySelector('meta[name="description"]')?.content || '').slice(0, 200), // Truncate to 200 chars
         buttonTexts: buttons,
         mentionedBrands: mentionedBrands
       };
@@ -119,14 +124,22 @@
     warningOverlay = null;
   }
 
-  async function captureScreenshot(retryCount = 0) {
+  async function captureScreenshot(retryCount = 0, allowAutomatic = false) {
     try {
-      // Skip screenshot capture for automatic checks - only allow for manual rechecks
-      // This avoids the activeTab permission issue since automatic checks happen
-      // without user interaction
-      if (!window.__manualRecheckRequested) {
-        console.log("[Mind-Link] Skipping automatic screenshot capture (requires user interaction)");
+      // Allow screenshot capture for:
+      // 1. Manual rechecks (user-initiated)
+      // 2. Critical scores (final score ≤ 2) - allowAutomatic flag
+      // NOTE: Screenshots require the tab to be active/visible
+      if (!window.__manualRecheckRequested && !allowAutomatic) {
+        console.log("[Mind-Link] Skipping screenshot - not manual recheck or critical score");
         return null;
+      }
+
+      // Log capture attempt type
+      if (window.__manualRecheckRequested) {
+        console.log("[Mind-Link] Capturing screenshot (manual recheck)");
+      } else if (allowAutomatic) {
+        console.log("[Mind-Link] Capturing screenshot (critical score - automatic)");
       }
 
       // Progressive delay strategy: wait longer for each attempt
@@ -143,16 +156,21 @@
         return response.screenshot;
       }
 
-      // Check if it's a rate limit, readback error, or permission error
+      // Check if it's a rate limit, readback error, permission error, or tab visibility error
       const errorMsg = response?.error || "";
       const isRateLimitError = errorMsg.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND');
       const isReadbackError = errorMsg.includes('image readback failed');
       const isPermissionError = errorMsg.includes('activeTab') || errorMsg.includes('not in effect');
       const isTabNotReady = errorMsg.includes('not fully loaded');
+      const isTabNotVisible = errorMsg.includes('must be visible') || errorMsg.includes('not active');
 
-      // Don't retry permission errors or tab not ready errors
-      if (isPermissionError || isTabNotReady) {
-        console.log("[Mind-Link] Screenshot unavailable:", errorMsg);
+      // Don't retry permission errors, tab not ready, or tab not visible errors
+      if (isPermissionError || isTabNotReady || isTabNotVisible) {
+        if (isTabNotVisible) {
+          console.log("[Mind-Link] Screenshot unavailable - tab must be visible/active for capture");
+        } else {
+          console.log("[Mind-Link] Screenshot unavailable:", errorMsg);
+        }
         return null;
       }
 
@@ -171,9 +189,14 @@
       const isRateLimitError = errorMsg.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND');
       const isReadbackError = errorMsg.includes('image readback failed');
       const isPermissionError = errorMsg.includes('activeTab') || errorMsg.includes('not in effect');
+      const isTabNotVisible = errorMsg.includes('must be visible') || errorMsg.includes('not active');
 
-      if (isPermissionError) {
-        console.log("[Mind-Link] Screenshot requires user interaction, proceeding with text-only analysis");
+      if (isPermissionError || isTabNotVisible) {
+        if (isTabNotVisible) {
+          console.log("[Mind-Link] Screenshot requires tab to be visible/active");
+        } else {
+          console.log("[Mind-Link] Screenshot requires user interaction, proceeding with text-only analysis");
+        }
         return null;
       }
 
@@ -235,11 +258,139 @@ Return ONLY JSON:
     }
   }
 
-  async function checkForPhishing() {
-    if (phishingCheckInProgress) return;
+  async function checkDomainLegitimacy(hostname) {
+    try {
+      console.log(`[Mind-Link] Checking domain legitimacy for: ${hostname}`);
 
-    // Don't check on certain known-safe domains and special pages
-    const safeDomains = ['google.com', 'github.com', 'microsoft.com', 'localhost'];
+      // Check cache first (24-hour validity)
+      const cacheKey = `domainCache_${hostname}`;
+      const cached = await chrome.storage.local.get(cacheKey);
+
+      if (cached[cacheKey]) {
+        const cacheAge = Date.now() - cached[cacheKey].timestamp;
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (cacheAge < CACHE_DURATION) {
+          console.log(`[Mind-Link] Using cached domain analysis (age: ${Math.round(cacheAge / 60000)} minutes)`);
+          return cached[cacheKey].result;
+        } else {
+          console.log(`[Mind-Link] Cache expired (age: ${Math.round(cacheAge / 60000)} minutes), re-analyzing`);
+        }
+      }
+
+      const prompt = `You are a security expert analyzing domain legitimacy. Evaluate if this domain is likely legitimate or suspicious.
+
+Domain: ${hostname}
+
+Analyze:
+1. **Well-known brands/services**: Is this a recognized company, service, or platform? (e.g., google.com, amazon.com, notion.so, chatgpt.com, spotify.com, github.com)
+2. **Common legitimate patterns**: Does it follow standard naming? (company-name.com, service.io, app.co, brand.net)
+3. **Typosquatting**: Are there misspellings of known brands? (g00gle.com, arnazon.com, paypa1.com, microsft.com)
+4. **TLD analysis**: 
+   - SAFE: .com, .org, .net, .edu, .gov, .io, .co, .ai, .app, .cloud, .dev, .tech
+   - RISKY: .tk, .ml, .ga, .cf, .gq (often used for scams)
+5. **Suspicious patterns**: Multiple hyphens, random letters, excessive length (>30 chars), IP addresses, unusual Unicode
+
+Be generous with legitimate sites - only flag clear red flags like typosquatting or known scam patterns.
+
+Return ONLY JSON:
+{
+  "isLikelyLegitimate": boolean,
+  "confidence": number (1-5, where 5 is very confident),
+  "reason": "brief explanation"
+}`;
+
+      const result = await window.__notesio_api.callChromeAI(prompt);
+
+      let parsed = null;
+      try {
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          parsed = JSON.parse(result);
+        }
+      } catch (e) {
+        console.error("[Mind-Link] Failed to parse domain legitimacy result:", result);
+        return { isLikelyLegitimate: true, confidence: 3, reason: "Unable to analyze" };
+      }
+
+      // Cache the result
+      await chrome.storage.local.set({
+        [cacheKey]: {
+          result: parsed,
+          timestamp: Date.now()
+        }
+      });
+      console.log(`[Mind-Link] Domain analysis cached for 24 hours`);
+
+      console.log(`[Mind-Link] Domain legitimacy result:`, parsed);
+      return parsed;
+    } catch (e) {
+      console.error("[Mind-Link] Domain legitimacy check error:", e);
+      // Default to allowing the domain if check fails
+      return { isLikelyLegitimate: true, confidence: 3, reason: "Check failed" };
+    }
+  }
+
+  async function checkForPhishing() {
+    if (phishingCheckInProgress) {
+      console.log("[Mind-Link] Phishing check already in progress, skipping");
+      return;
+    }
+
+    // Rate limiting: Prevent rapid repeated checks
+    const currentHostname = location.hostname;
+    const now = Date.now();
+
+    if (currentHostname === lastCheckedHostname && (now - lastCheckTime) < MIN_CHECK_INTERVAL) {
+      const remainingTime = Math.round((MIN_CHECK_INTERVAL - (now - lastCheckTime)) / 1000);
+      console.log(`[Mind-Link] Rate limit: Check throttled (retry in ${remainingTime}s)`);
+      return;
+    }
+
+    lastCheckTime = now;
+    lastCheckedHostname = currentHostname;
+
+    // Only whitelist the absolute top most-visited sites globally to avoid unnecessary AI calls
+    // This is a performance optimization for the most common sites
+    const topGlobalSites = [
+      // Search & Social
+      'google.com', 'youtube.com', 'facebook.com', 'instagram.com',
+      'twitter.com', 'x.com', 'reddit.com', 'linkedin.com', 'tiktok.com',
+      'pinterest.com', 'tumblr.com', 'snapchat.com',
+
+      // E-commerce
+      'amazon.com', 'ebay.com', 'walmart.com', 'target.com', 'etsy.com',
+      'shopify.com', 'aliexpress.com',
+
+      // Tech & Productivity
+      'microsoft.com', 'apple.com', 'github.com', 'gitlab.com', 'bitbucket.org',
+      'stackoverflow.com', 'stackexchange.com', 'npmjs.com', 'pypi.org',
+      'notion.so', 'trello.com', 'asana.com', 'slack.com', 'discord.com',
+      'zoom.us', 'teams.microsoft.com', 'meet.google.com',
+
+      // Streaming & Entertainment
+      'netflix.com', 'hulu.com', 'disneyplus.com', 'spotify.com',
+      'twitch.tv', 'soundcloud.com', 'vimeo.com',
+
+      // Cloud & Storage
+      'dropbox.com', 'box.com', 'drive.google.com', 'onedrive.live.com',
+      'icloud.com',
+
+      // Education & Reference
+      'wikipedia.org', 'medium.com', 'quora.com', 'coursera.org',
+      'udemy.com', 'khanacademy.org', 'edx.org',
+
+      // News
+      'nytimes.com', 'bbc.com', 'cnn.com', 'theguardian.com', 'reuters.com',
+
+      // Finance
+      'paypal.com', 'stripe.com', 'square.com',
+
+      // Development
+      'localhost', '127.0.0.1'
+    ];
     const specialProtocols = ['chrome://', 'chrome-extension://', 'about:', 'file://'];
 
     // Skip special protocol pages (can't capture screenshots)
@@ -247,7 +398,9 @@ Return ONLY JSON:
       return;
     }
 
-    if (safeDomains.some(d => location.hostname.includes(d))) {
+    // Fast-path for top global sites (no AI call needed)
+    if (topGlobalSites.some(d => location.hostname.includes(d))) {
+      console.log(`[Mind-Link] Skipping analysis - top global site: ${location.hostname}`);
       return;
     }
 
@@ -257,19 +410,70 @@ Return ONLY JSON:
       return;
     }
 
+    // STEP 1: AI-powered domain legitimacy check with error handling
+    let legitimacy;
+    try {
+      legitimacy = await checkDomainLegitimacy(location.hostname);
+    } catch (e) {
+      console.error("[Mind-Link] Domain legitimacy check failed:", e);
+      // Fallback to safe default on error
+      legitimacy = { isLikelyLegitimate: true, confidence: 3, reason: "Check failed - proceeding with caution" };
+    }
+
+    // Smart decision tree based on confidence level
+    if (legitimacy.isLikelyLegitimate && legitimacy.confidence >= 4) {
+      // HIGH CONFIDENCE - Site is likely safe, store positive result and skip analysis
+      console.log(`[Mind-Link] Domain appears legitimate with high confidence (${legitimacy.confidence}/5) - ${legitimacy.reason}`);
+      const storageKey = `trustScore_${location.hostname}`;
+      await chrome.storage.local.set({ [storageKey]: 4 });
+      return;
+    }
+
+    if (!legitimacy.isLikelyLegitimate && legitimacy.confidence >= 4) {
+      // HIGH CONFIDENCE THREAT - Domain is clearly suspicious, proceed with full analysis
+      console.log(`[Mind-Link] High-confidence threat detected (${legitimacy.confidence}/5) - ${legitimacy.reason}`);
+      // Continue to full analysis below
+    } else if (legitimacy.confidence <= 2) {
+      // HIGH THREAT - Low confidence or suspicious, needs full analysis with screenshot
+      console.log(`[Mind-Link] High-risk domain (confidence: ${legitimacy.confidence}/5) - Full analysis required`);
+      // Continue to full analysis below
+    } else if (legitimacy.confidence === 3) {
+      // MEDIUM THREAT - Borderline case, do text-only analysis for efficiency
+      console.log(`[Mind-Link] Medium-risk domain (confidence: ${legitimacy.confidence}/5) - Text-only analysis`);
+      // Continue to full analysis but skip screenshot (handled in screenshot logic)
+    } else {
+      // Fallback for any edge cases
+      console.log(`[Mind-Link] Domain requires analysis (confidence: ${legitimacy.confidence}/5) - ${legitimacy.reason}`);
+    }
+
     phishingCheckInProgress = true;
 
     try {
       const pageData = collectPageData();
       if (!pageData) return;
 
-      // STEP 1: Capture screenshot for visual analysis (only if user-initiated)
+      // STEP 1: Capture screenshot for visual analysis
       let screenshot = null;
-      if (window.__manualRecheckRequested) {
-        console.log("[Mind-Link] Capturing screenshot for visual analysis...");
-        screenshot = await captureScreenshot();
+      if (legitimacy.confidence <= 2 || window.__manualRecheckRequested) {
+        // High threat (confidence ≤ 2) OR manual recheck → always capture screenshot
+        console.log("[Mind-Link] High-risk site detected - Capturing screenshot for visual analysis");
+
+        try {
+          screenshot = await captureScreenshot();
+          if (screenshot) {
+            console.log("[Mind-Link] Screenshot captured successfully");
+          } else {
+            console.log("[Mind-Link] Screenshot capture failed, proceeding with text-only analysis");
+          }
+        } catch (e) {
+          console.error("[Mind-Link] Screenshot error:", e);
+        }
+      } else if (legitimacy.confidence === 3) {
+        // Medium threat - skip screenshot for performance
+        console.log("[Mind-Link] Medium-risk site - Skipping screenshot (text-only analysis)");
       } else {
-        console.log("[Mind-Link] Automatic check - skipping screenshot (text-only analysis)");
+        // Low threat - no screenshot needed
+        console.log("[Mind-Link] Low-risk site - No screenshot needed");
       }
 
       // STEP 2: Perform visual analysis if screenshot available
@@ -285,15 +489,17 @@ Return ONLY JSON:
       console.log("[Mind-Link] Analyzing textual indicators...");
       const prompt = `Analyze this webpage for phishing indicators. This is to protect elderly users with low technical literacy.
 
+Domain Legitimacy Pre-check: ${legitimacy.reason} (Confidence: ${legitimacy.confidence}/5)
+
 Page Information:
-- URL: ${pageData.url}
+- URL: ${pageData.url.slice(0, 100)}${pageData.url.length > 100 ? '...' : ''}
 - Hostname: ${pageData.hostname}
-- Title: ${pageData.title}
+- Title: ${pageData.title.slice(0, 100)}
 - Has password field: ${pageData.hasPasswordField}
 - Has login form: ${pageData.hasLoginForm}
 - Contains urgent language: ${pageData.urgentLanguage}
-- External links: ${pageData.suspiciousLinks.length}
-- Button texts: ${pageData.buttonTexts.join(', ') || 'none'}
+- Sample external links (${pageData.suspiciousLinks.length} total): ${pageData.suspiciousLinks.slice(0, 3).join(', ')}
+- Sample button texts: ${pageData.buttonTexts.join(', ') || 'none'}
 - Mentioned brands: ${pageData.mentionedBrands.join(', ') || 'none'}
 
 Evaluate for:
@@ -302,6 +508,8 @@ Evaluate for:
 3. Suspicious login forms
 4. Mismatched branding (claims to be a brand but URL doesn't match)
 5. Poor grammar/spelling
+
+IMPORTANT: The domain pre-check already found: "${legitimacy.reason}". Factor this into your analysis.
 
 Return ONLY JSON:
 {
@@ -326,23 +534,121 @@ Return ONLY JSON:
         return;
       }
 
-      // STEP 4: Combine visual and textual analysis
+      // STEP 4: Combine domain, visual, and textual analysis with confidence weighting
       let finalTrustScore = textualAnalysis.textualTrustScore || 3;
       let combinedFindings = textualAnalysis.textualFindings || "";
 
+      // Calculate weighted trust score based on available indicators and their confidence
+      const indicators = [];
+
+      // Domain analysis (always available)
+      indicators.push({
+        score: legitimacy.isLikelyLegitimate ? 5 : (6 - legitimacy.confidence), // Invert confidence for suspicious domains
+        weight: 0.35, // 35% weight
+        confidence: legitimacy.confidence / 5,
+        name: 'domain'
+      });
+
+      // Textual analysis (always performed)
+      indicators.push({
+        score: textualAnalysis.textualTrustScore,
+        weight: 0.30, // 30% weight
+        confidence: 1.0, // Textual analysis always runs
+        name: 'textual'
+      });
+
+      // Visual analysis (if available)
       if (visualAnalysis && typeof visualAnalysis.visualTrustScore === 'number') {
-        // Average the two scores, but weight visual analysis slightly less (70% text, 30% visual)
-        finalTrustScore = Math.round(
-          (textualAnalysis.textualTrustScore * 0.7) +
-          (visualAnalysis.visualTrustScore * 0.3)
-        );
+        indicators.push({
+          score: visualAnalysis.visualTrustScore,
+          weight: 0.35, // 35% weight (equal to domain)
+          confidence: 1.0,
+          name: 'visual'
+        });
 
         // Combine findings
         if (visualAnalysis.visualSuspicious) {
           combinedFindings += ` Visual warning: ${visualAnalysis.visualFindings}`;
         }
+      }
 
-        console.log("[Mind-Link] Combined analysis - Trust Score:", finalTrustScore);
+      // Calculate confidence-weighted score
+      let totalWeight = 0;
+      let weightedSum = 0;
+
+      for (const indicator of indicators) {
+        const effectiveWeight = indicator.weight * indicator.confidence;
+        weightedSum += indicator.score * effectiveWeight;
+        totalWeight += effectiveWeight;
+      }
+
+      finalTrustScore = Math.round(weightedSum / totalWeight);
+
+      // Apply safety bounds
+      finalTrustScore = Math.max(1, Math.min(5, finalTrustScore));
+
+      console.log("[Mind-Link] Trust score calculation:", {
+        domain: indicators[0].score,
+        textual: indicators[1].score,
+        visual: indicators[2]?.score || 'N/A',
+        finalScore: finalTrustScore,
+        weights: indicators.map(i => `${i.name}: ${i.weight}`)
+      });
+
+      // CRITICAL SCORE ENHANCEMENT: If final score is ≤ 2 and we don't have visual analysis yet,
+      // capture screenshot for visual confirmation to improve accuracy
+      if (finalTrustScore <= 2 && !visualAnalysis && legitimacy.confidence <= 3) {
+        console.log("[Mind-Link] CRITICAL: Final score ≤ 2 detected - Capturing screenshot for visual confirmation");
+
+        try {
+          // Pass allowAutomatic=true to enable screenshot for critical scores
+          const criticalScreenshot = await captureScreenshot(0, true);
+          if (criticalScreenshot) {
+            console.log("[Mind-Link] Critical screenshot captured, performing visual analysis...");
+            const criticalVisualAnalysis = await analyzeVisual(criticalScreenshot, pageData);
+
+            if (criticalVisualAnalysis && typeof criticalVisualAnalysis.visualTrustScore === 'number') {
+              // Add visual indicator and recalculate
+              indicators.push({
+                score: criticalVisualAnalysis.visualTrustScore,
+                weight: 0.35,
+                confidence: 1.0,
+                name: 'visual'
+              });
+
+              // Recalculate trust score with visual data
+              totalWeight = 0;
+              weightedSum = 0;
+
+              for (const indicator of indicators) {
+                const effectiveWeight = indicator.weight * indicator.confidence;
+                weightedSum += indicator.score * effectiveWeight;
+                totalWeight += effectiveWeight;
+              }
+
+              finalTrustScore = Math.round(weightedSum / totalWeight);
+              finalTrustScore = Math.max(1, Math.min(5, finalTrustScore));
+
+              // Update findings
+              if (criticalVisualAnalysis.visualSuspicious) {
+                combinedFindings += ` Visual warning: ${criticalVisualAnalysis.visualFindings}`;
+              }
+
+              console.log("[Mind-Link] Recalculated trust score with visual analysis:", {
+                domain: indicators[0].score,
+                textual: indicators[1].score,
+                visual: indicators[2].score,
+                finalScore: finalTrustScore,
+                improvement: 'Added visual confirmation'
+              });
+            }
+          } else {
+            console.log("[Mind-Link] Critical screenshot unavailable, proceeding with text-only score");
+          }
+        } catch (e) {
+          console.error("[Mind-Link] Critical screenshot capture failed:", e);
+          // Continue with original score
+        }
       }
 
       // Store trust score in chrome.storage for popup access

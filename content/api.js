@@ -40,7 +40,9 @@
         console.log("[Mind-Link] Model needs to be downloaded. Initiating download...");
       }
 
-      const createOptions = {};
+      const createOptions = {
+        outputLanguage: 'en' // Specify English to prevent warnings and improve quality
+      };
       if (options.systemPrompt) {
         createOptions.initialPrompts = [
           { role: 'system', content: options.systemPrompt }

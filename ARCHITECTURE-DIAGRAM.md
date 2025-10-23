@@ -32,60 +32,60 @@
                              ▼
 ┌═════════════════════════════════════════════════════════════════════┐
 ║                  STAGE 1: SUMMARIZER API                            ║
-║                                                                      ║
+║                                                                     ║
 ║  INPUT:  Full T&C text (5000+ words)                                ║
 ║          "By subscribing to FluxAntivirus Pro, you hereby           ║
 ║          acknowledge and agree to be bound by these Terms and       ║
 ║          Conditions. The Service is provided by FluxTech            ║
 ║          Solutions LLC, a Delaware corporation... [4900 more words]"║
-║                                                                      ║
+║                                                                     ║
 ║  PROCESS: Summarizer API with options:                              ║
 ║           • type: "tldr"                                            ║
 ║           • format: "plain-text"                                    ║
 ║           • length: "short"                                         ║
-║                                                                      ║
+║                                                                     ║
 ║  OUTPUT: Condensed summary (~200 words)                             ║
-║          "FluxAntivirus Pro offers a $1 trial for 30 days. After   ║
+║          "FluxAntivirus Pro offers a $1 trial for 30 days. After    ║
 ║          the trial, it automatically renews at $99.99/month unless  ║
 ║          cancelled 7 days before renewal. All fees are non-         ║
 ║          refundable. Early termination within 12 months incurs a    ║
 ║          50% fee of remaining payments..."                          ║
-║                                                                      ║
+║                                                                     ║
 ║  TIME: ~3-5 seconds                                                 ║
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
 ┌═════════════════════════════════════════════════════════════════════┐
 ║                  STAGE 2: REWRITER API                              ║
-║                                                                      ║
+║                                                                     ║
 ║  INPUT:  Summary from Stage 1 (~200 words)                          ║
-║          "FluxAntivirus Pro offers a $1 trial for 30 days. After   ║
+║          "FluxAntivirus Pro offers a $1 trial for 30 days. After    ║
 ║          the trial, it automatically renews at $99.99/month..."     ║
-║                                                                      ║
+║                                                                     ║
 ║  PROCESS: Rewriter API with options:                                ║
 ║           • tone: "more-casual"                                     ║
 ║           • format: "plain-text"                                    ║
 ║           • length: "as-is"                                         ║
 ║           • sharedContext: "Terms for subscription service"         ║
 ║           • context: "Rewrite for elderly users"                    ║
-║                                                                      ║
+║                                                                 ║
 ║  OUTPUT: Simplified language (~200 words)                           ║
-║          "You pay $1 now for a 30-day trial. After 30 days, you'll ║
+║          "You pay $1 now for a 30-day trial. After 30 days, you'll  ║
 ║          be charged $99.99 every month automatically. To cancel,    ║
 ║          you must send a letter at least 7 days before your next    ║
 ║          payment. You can't get refunds. If you quit within a year, ║
 ║          you pay a $600 cancellation fee..."                        ║
-║                                                                      ║
+║                                                                     ║
 ║  TIME: ~2-4 seconds                                                 ║
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
 ┌═════════════════════════════════════════════════════════════════════┐
 ║                  STAGE 3: PROMPT API                                ║
-║                                                                      ║
+║                                                                     ║
 ║  INPUT:  Simplified text from Stage 2 (~200 words)                  ║
-║          "You pay $1 now for a 30-day trial. After 30 days..."     ║
-║                                                                      ║
+║          "You pay $1 now for a 30-day trial. After 30 days..."      ║
+║                                                                     ║
 ║  PROCESS: Prompt API with detection instructions:                   ║
 ║           "Analyze this terms of service for:                       ║
 ║           1. Auto-renewal clauses                                   ║
@@ -96,7 +96,7 @@
 ║           6. Difficult cancellation requirements                    ║
 ║           7. Early termination fees                                 ║
 ║           Return JSON: {hasHiddenFees, severity, findings}"         ║
-║                                                                      ║
+║                                                                     ║
 ║  OUTPUT: Structured analysis (JSON)                                 ║
 ║          {                                                          ║
 ║            "hasHiddenFees": true,                                   ║
@@ -108,35 +108,35 @@
 ║              "All charges non-refundable"                           ║
 ║            ]                                                        ║
 ║          }                                                          ║
-║                                                                      ║
+║                                                                     ║
 ║  TIME: ~3-6 seconds                                                 ║
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CACHE & DISPLAY                               │
-│                                                                      │
-│  1. SAVE to chrome.storage.local:                                   │
-│     • Key: URL                                                      │
-│     • Value: {summary, simplified, findings, severity, timestamp}   │
-│                                                                      │
-│  2. CREATE WARNING BANNER:                                          │
+┌────────────────────────────────────────────────────────────────────┐
+│                        CACHE & DISPLAY                             │
+│                                                                    │
+│  1. SAVE to chrome.storage.local:                                  │
+│     • Key: URL                                                     │
+│     • Value: {summary, simplified, findings, severity, timestamp}  │
+│                                                                    │
+│  2. CREATE WARNING BANNER:                                         │
 │     ┌────────────────────────────────────────┐                     │
 │     │ ⚠️ WARNING: Potential Hidden Costs     │                     │
 │     │                                        │                     │
-│     │ • $1 trial auto-renews at $99.99/month│                     │
-│     │ • Must cancel 7 days before renewal   │                     │
-│     │ • Early termination fee: $600         │                     │
-│     │ • All charges non-refundable          │                     │
+│     │ • $1 trial auto-renews at $99.99/month │                     │
+│     │ • Must cancel 7 days before renewal    │                     │
+│     │ • Early termination fee: $600          │                     │
+│     │ • All charges non-refundable           │                     │
 │     │                                        │                     │
-│     │ [View Full Analysis] [Dismiss]        │                     │
+│     │ [View Full Analysis] [Dismiss]         │                     │
 │     └────────────────────────────────────────┘                     │
-│                                                                      │
-│  3. PREPARE DETAILED MODAL:                                         │
-│     • Section 1: Summary (Stage 1 output)                           │
-│     • Section 2: Simplified (Stage 2 output)                        │
-│     • Section 3: Key Findings (Stage 3 output)                      │
-└─────────────────────────────────────────────────────────────────────┘
+│                                                                    │
+│  3. PREPARE DETAILED MODAL:                                        │
+│     • Section 1: Summary (Stage 1 output)                          │
+│     • Section 2: Simplified (Stage 2 output)                       │
+│     • Section 3: Key Findings (Stage 3 output)                     │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ---

@@ -64,6 +64,19 @@ Dynamic ad blocking that learns patterns instead of using static lists:
 
 Protects users from subscription traps hidden in complex Terms & Conditions:
 
+**🆕 NEW: Manual Trigger Button**
+- Fixed button in bottom-right corner of every page
+- **Button States:**
+  - 🔍 **"Analyze Terms"** (Blue) - Click to analyze current page
+  - 📋 **"View T&C Analysis"** (Green) - Analysis complete, click to view
+  - ⏳ **"Analyzing..."** (Orange) - Processing in progress
+  - ❌ **"Not a T&C Page"** (Gray) - Page doesn't contain analyzable terms
+
+**Enhanced Page Detection:**
+- **ALL Terms & Conditions pages** - Privacy policies, user agreements, license agreements, refund policies
+- **ALL Pricing/Subscription pages** - Pricing tables, plan comparisons, checkout pages, trial offers
+- Smart detection using URL, title, content analysis, and UI element recognition
+
 **How It Works:**
 1. **Stage 1 - Summarizer API:** Condenses 5000+ word T&C to ~200 words
 2. **Stage 2 - Rewriter API:** Simplifies legal jargon to plain, elderly-friendly language
@@ -78,10 +91,18 @@ Protects users from subscription traps hidden in complex Terms & Conditions:
 - Price increases without notice
 
 **User Experience:**
-- Automatically detects T&C pages and links
-- Shows inline warning banner with key findings
-- "View Full Analysis" button opens detailed modal showing all 3 stages
-- 24-hour caching for performance
+
+**Automatic Mode:**
+- Extension automatically detects T&C and pricing pages in background
+- Runs analysis and caches results (24-hour cache)
+- Button shows green "View T&C Analysis" when ready
+- High-severity findings trigger warning banner automatically
+
+**Manual Mode:**
+- User clicks button on any page
+- Extension validates if page contains terms or pricing info
+- If valid: Runs 3-stage analysis and shows results
+- If invalid: Shows error "Not a T&C Page" for 5 seconds
 
 **Example Warning:**
 ```
@@ -90,10 +111,14 @@ Protects users from subscription traps hidden in complex Terms & Conditions:
 • $1 trial auto-renews at $99.99/month
 • Must cancel 7 days before renewal or charged
 • Early termination fee: $600
-• All charges non-refundable
 
 [View Full Analysis] [Dismiss]
 ```
+
+**Cache System:**
+- 24-hour cache prevents redundant analysis
+- Manual trigger reuses cached analysis instantly
+- Cache stores: summary, simplified text, findings, severity, page type
 
 ---
 
@@ -129,6 +154,39 @@ Why we flagged this:
 
 Recommendation: Close this tab immediately.
 ```
+
+---
+
+### 🆕 Manual Terms Analysis Button
+
+**New Feature:** Fixed button in bottom-right corner on every page
+
+**How to Use:**
+1. **Look for the button** - Appears on all pages in bottom-right
+2. **Check the button state:**
+   - 🔍 Blue "Analyze Terms" - Click to analyze current page
+   - 📋 Green "View T&C Analysis" - Results ready, click to view
+   - ⏳ Orange "Analyzing..." - Processing (15-30 seconds)
+   - ❌ Gray "Not a T&C Page" - Page has no analyzable terms
+
+3. **On Terms/Pricing Pages:**
+   - Button automatically runs analysis in background
+   - Turns green when complete
+   - Click to view detailed 3-stage analysis
+
+4. **On Other Pages:**
+   - Click button to check if page has hidden terms
+   - If not T&C page, shows error notification
+   - Button resets after 5 seconds
+
+**What Gets Analyzed:**
+- ✅ Terms of Service pages
+- ✅ Privacy Policies
+- ✅ Pricing/subscription pages
+- ✅ User agreements
+- ✅ Refund policies
+- ✅ Checkout pages with trial offers
+- ❌ Regular content pages (blog posts, articles, etc.)
 
 ---
 
